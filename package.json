@@ -11,6 +11,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@capacitor/android": "^8.5.1",
     "@capacitor/core": "^8.5.1",
     "@capacitor/local-notifications": "^8.3.1",
     "@heroicons/react": "^2.2.0",
