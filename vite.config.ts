@@ -5,6 +5,8 @@ import { defineConfig } from 'vite'
 
 // https://vite.dev/config/
 export default defineConfig(({ mode }) => ({
+  server: { port: 4999, strictPort: true },
+  preview: { port: 4999, strictPort: true },
   // GitHub Pages serves this as a project site at /revez/; native
   // Capacitor builds and local dev both want root-relative paths.
   base: mode === 'gh-pages' ? '/revez/' : '/',

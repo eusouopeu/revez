@@ -28,7 +28,7 @@ total é a soma das provisões de todos os itens ativos.
   item vencido ou a menos de um mês da troca provisiona o custo total
   naquele mês — um pico visível na mensalidade total.
 
-## Alternativa não implementada: custo médio perpétuo (`perpetual-average`)
+## Também implementado: custo médio perpétuo (`perpetual-average`)
 
 `monthlyProvision(item) = (preçoProjetado × quantidade) ÷ vidaÚtilTotalMeses`
 
@@ -49,14 +49,12 @@ vida completo (não pelo tempo restante).
 
 ## Como trocar de método
 
-`AppSettings.provisioningMethod` já existe no schema (`per-item` |
-`perpetual-average`) para permitir a troca sem migração de dados. Para
-ativar o método perpétuo:
+`monthlyProvision` (em `src/domain/calculations.ts`) despacha pelo valor de
+`settings.provisioningMethod`. A troca é feita em Ajustes, na tela do app —
+sem migração de dados, já que `Purchase` e `Item` têm tudo que os dois
+métodos precisam.
 
-1. Implementar `monthlyProvisionPerpetual(item, purchases, settings, today)`
-   em `src/domain/calculations.ts`, usando `item.lifespanMonths` no lugar de
-   `monthsBetween(today, targetDate)` como denominador.
-2. Em `totalMonthly` (e em qualquer lugar que chame `monthlyProvision`),
-   despachar pelo valor de `settings.provisioningMethod`.
-3. Não é necessária migração de dados — `Purchase` e `Item` já têm tudo que
-   os dois métodos precisam.
+`totalMonthly` mostra o total sob o método ativo; `provisionBreakdown`
+separa esse total em uma parte recorrente e uma parte "urgente" (itens que
+vencem dentro de um mês) sob o método `per-item` — útil para explicar o pico
+descrito acima sem precisar trocar de método.

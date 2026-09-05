@@ -28,3 +28,15 @@ export function usePurchasesForItem(itemId: string) {
     [],
   )
 }
+
+export function useContributions() {
+  return useLiveQuery(() => db.contributions.toArray(), [], [])
+}
+
+export function useContributionsForItem(itemId: string) {
+  return useLiveQuery(
+    () => db.contributions.where('itemId').equals(itemId).sortBy('date'),
+    [itemId],
+    [],
+  )
+}

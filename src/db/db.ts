@@ -1,10 +1,11 @@
 import Dexie, { type EntityTable } from 'dexie'
-import type { AppSettings, Category, Item, Purchase } from '../domain/types'
+import type { AppSettings, Category, Contribution, Item, Purchase } from '../domain/types'
 
 export const db = new Dexie('revez') as Dexie & {
   categories: EntityTable<Category, 'id'>
   items: EntityTable<Item, 'id'>
   purchases: EntityTable<Purchase, 'id'>
+  contributions: EntityTable<Contribution, 'id'>
   settings: EntityTable<AppSettings, 'id'>
 }
 
@@ -13,6 +14,10 @@ db.version(1).stores({
   items: 'id, categoryId, status',
   purchases: 'id, itemId, date',
   settings: 'id',
+})
+
+db.version(2).stores({
+  contributions: 'id, itemId, date',
 })
 
 export const DEFAULT_SETTINGS: AppSettings = {

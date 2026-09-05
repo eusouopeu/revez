@@ -29,6 +29,14 @@ export interface Purchase {
   note?: string
 }
 
+/** A deposit set aside toward an item's next replacement, before it's bought. */
+export interface Contribution {
+  id: string
+  itemId: string
+  date: string // ISO date
+  amount: number
+}
+
 export interface AppSettings {
   id: 'settings'
   annualInflationRate: number // e.g. 0.045
