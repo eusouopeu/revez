@@ -5,7 +5,7 @@ import { Dashboard } from './pages/Dashboard'
 import { ItemForm } from './pages/ItemForm'
 import { ItemDetail } from './pages/ItemDetail'
 import { Settings } from './pages/Settings'
-import { Projection } from './pages/Projection'
+import { DataPage } from './pages/Data'
 import { seedIfEmpty } from './db/db'
 import { useNotificationsSync } from './hooks/useNotificationsSync'
 
@@ -28,7 +28,7 @@ export default function App() {
           <Route path="/itens/novo" element={<ItemForm />} />
           <Route path="/itens/:id" element={<ItemDetail />} />
           <Route path="/itens/:id/editar" element={<ItemForm />} />
-          <Route path="/projecao" element={<Projection />} />
+          <Route path="/dados" element={<DataPage />} />
           <Route path="/config" element={<Settings />} />
         </Route>
       </Routes>

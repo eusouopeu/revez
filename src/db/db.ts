@@ -20,6 +20,38 @@ db.version(2).stores({
   contributions: 'id, itemId, date',
 })
 
+/**
+ * The original schema conflated "category" with what is really an item
+ * type (fones de ouvido, travesseiro...). This splits them: categories
+ * become broad groupings, and the old per-item-type list moves to
+ * ITEM_TYPES as a naming/lifespan suggestion catalog. Existing categories
+ * and item categoryIds are remapped so installed apps don't lose data.
+ */
+const OLD_CATEGORY_TO_NEW: Record<string, { categoryId: string; icon: string }> = {
+  fones: { categoryId: 'eletronicos', icon: 'SpeakerWaveIcon' },
+  travesseiro: { categoryId: 'cama-mesa-banho', icon: 'MoonIcon' },
+  'roupa-de-cama': { categoryId: 'cama-mesa-banho', icon: 'Square3Stack3DIcon' },
+  meias: { categoryId: 'roupas', icon: 'SwatchIcon' },
+  tenis: { categoryId: 'roupas', icon: 'BoltIcon' },
+  oculos: { categoryId: 'outros', icon: 'EyeIcon' },
+  'escova-de-dentes': { categoryId: 'outros', icon: 'SparklesIcon' },
+  toalhas: { categoryId: 'cama-mesa-banho', icon: 'Square2StackIcon' },
+}
+
+db.version(3)
+  .stores({})
+  .upgrade(async (tx) => {
+    await tx.table('items').toCollection().modify((item) => {
+      const remap = OLD_CATEGORY_TO_NEW[item.categoryId]
+      if (remap) {
+        item.categoryId = remap.categoryId
+        item.icon = remap.icon
+      }
+    })
+    await tx.table('categories').clear()
+    await tx.table('categories').bulkAdd(DEFAULT_CATEGORIES)
+  })
+
 export const DEFAULT_SETTINGS: AppSettings = {
   id: 'settings',
   annualInflationRate: 0.045,
@@ -30,14 +62,30 @@ export const DEFAULT_SETTINGS: AppSettings = {
 }
 
 export const DEFAULT_CATEGORIES: Category[] = [
-  { id: 'fones', name: 'Fones de ouvido', icon: 'SpeakerWaveIcon', defaultLifespanMonths: 24 },
-  { id: 'travesseiro', name: 'Travesseiro', icon: 'MoonIcon', defaultLifespanMonths: 18 },
-  { id: 'roupa-de-cama', name: 'Roupa de cama', icon: 'Square3Stack3DIcon', defaultLifespanMonths: 36 },
-  { id: 'meias', name: 'Meias', icon: 'SwatchIcon', defaultLifespanMonths: 12 },
-  { id: 'tenis', name: 'Tênis', icon: 'BoltIcon', defaultLifespanMonths: 12 },
-  { id: 'oculos', name: 'Óculos', icon: 'EyeIcon', defaultLifespanMonths: 24 },
-  { id: 'escova-de-dentes', name: 'Escova de dentes', icon: 'SparklesIcon', defaultLifespanMonths: 3 },
-  { id: 'toalhas', name: 'Toalhas', icon: 'Square2StackIcon', defaultLifespanMonths: 24 },
+  { id: 'roupas', name: 'Roupas', icon: 'SwatchIcon', defaultLifespanMonths: 12 },
+  { id: 'cama-mesa-banho', name: 'Cama, mesa e banho', icon: 'HomeModernIcon', defaultLifespanMonths: 24 },
+  { id: 'cozinha', name: 'Cozinha', icon: 'CakeIcon', defaultLifespanMonths: 24 },
+  { id: 'eletronicos', name: 'Eletrônicos', icon: 'CpuChipIcon', defaultLifespanMonths: 24 },
+  { id: 'pets', name: 'Pets', icon: 'HeartIcon', defaultLifespanMonths: 12 },
+  { id: 'outros', name: 'Outros', icon: 'EllipsisHorizontalCircleIcon', defaultLifespanMonths: 12 },
+]
+
+/** Suggestion catalog for the "Item" autocomplete in the item form. */
+export interface ItemType {
+  name: string
+  icon: string
+  defaultLifespanMonths: number
+}
+
+export const ITEM_TYPES: ItemType[] = [
+  { name: 'Fone de ouvido', icon: 'SpeakerWaveIcon', defaultLifespanMonths: 24 },
+  { name: 'Travesseiro', icon: 'MoonIcon', defaultLifespanMonths: 18 },
+  { name: 'Roupa de cama', icon: 'Square3Stack3DIcon', defaultLifespanMonths: 36 },
+  { name: 'Meias', icon: 'SwatchIcon', defaultLifespanMonths: 12 },
+  { name: 'Tênis', icon: 'BoltIcon', defaultLifespanMonths: 12 },
+  { name: 'Óculos', icon: 'EyeIcon', defaultLifespanMonths: 24 },
+  { name: 'Escova de dentes', icon: 'SparklesIcon', defaultLifespanMonths: 3 },
+  { name: 'Toalhas', icon: 'Square2StackIcon', defaultLifespanMonths: 24 },
 ]
 
 export async function seedIfEmpty(): Promise<void> {

@@ -49,8 +49,8 @@ export function Dashboard() {
     <div className="px-4 pt-6">
       <div className="flex items-start justify-between">
         <h1 className="text-sm font-semibold uppercase tracking-wide text-slate-500">Guardar por mês</h1>
-        <Link to="/projecao" className="flex items-center gap-1 text-xs font-medium text-violet-600 dark:text-violet-400">
-          <ChartBarIcon className="h-4 w-4" /> Projeção
+        <Link to="/dados" className="flex items-center gap-1 text-xs font-medium text-violet-600 dark:text-violet-400">
+          <ChartBarIcon className="h-4 w-4" /> Dados
         </Link>
       </div>
       <p className="mt-1 text-4xl font-extrabold text-slate-900 dark:text-slate-50">{formatBRL(total)}</p>
@@ -80,7 +80,7 @@ export function Dashboard() {
             <div key={item.id} className={`flex items-center gap-3 rounded-xl border p-3 ${urgencyStyle[urgency]}`}>
               <Link to={`/itens/${item.id}`} className="flex min-w-0 flex-1 items-center gap-3">
                 <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-violet-100 dark:bg-violet-900">
-                  <CategoryIcon name={category?.icon ?? 'CubeIcon'} className="h-5 w-5 text-violet-600 dark:text-violet-300" />
+                  <CategoryIcon name={item.icon ?? category?.icon ?? 'CubeIcon'} className="h-5 w-5 text-violet-600 dark:text-violet-300" />
                 </div>
                 <div className="min-w-0 flex-1">
                   <p className="truncate font-semibold text-slate-900 dark:text-slate-50">{item.name}</p>
@@ -127,7 +127,7 @@ export function Dashboard() {
                   >
                     <Link to={`/itens/${item.id}`} className="flex min-w-0 flex-1 items-center gap-3">
                       <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-slate-100 dark:bg-slate-800">
-                        <CategoryIcon name={category?.icon ?? 'CubeIcon'} className="h-4.5 w-4.5 text-slate-500" />
+                        <CategoryIcon name={item.icon ?? category?.icon ?? 'CubeIcon'} className="h-4.5 w-4.5 text-slate-500" />
                       </div>
                       <p className="truncate text-sm text-slate-600 dark:text-slate-400">{item.name}</p>
                     </Link>

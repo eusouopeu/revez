@@ -1,7 +1,7 @@
 import { useNavigate, useParams } from 'react-router-dom'
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useCategories, useItems } from '../hooks/useAppData'
-import { db } from '../db/db'
+import { db, ITEM_TYPES, type ItemType } from '../db/db'
 import { todayISO } from '../domain/format'
 import { CategoryIcon } from '../components/IconBadge'
 
@@ -13,6 +13,9 @@ export function ItemForm() {
   const editing = id ? items?.find((i) => i.id === id) : undefined
 
   const [categoryId, setCategoryId] = useState('')
+  const [itemTypeQuery, setItemTypeQuery] = useState('')
+  const [showItemTypeSuggestions, setShowItemTypeSuggestions] = useState(false)
+  const [icon, setIcon] = useState<string | undefined>(undefined)
   const [name, setName] = useState('')
   const [lifespanMonths, setLifespanMonths] = useState(12)
   const [quantity, setQuantity] = useState(1)
@@ -23,6 +26,8 @@ export function ItemForm() {
   useEffect(() => {
     if (editing) {
       setCategoryId(editing.categoryId)
+      setItemTypeQuery('')
+      setIcon(editing.icon)
       setName(editing.name)
       setLifespanMonths(editing.lifespanMonths)
       setQuantity(editing.quantity)
@@ -31,17 +36,26 @@ export function ItemForm() {
       setManualTargetPrice(editing.manualTargetPrice?.toString() ?? '')
     } else if (categories && categories.length > 0 && !categoryId) {
       setCategoryId(categories[0].id)
-      setLifespanMonths(categories[0].defaultLifespanMonths)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [editing, categories])
 
-  function onCategoryChange(newId: string) {
-    setCategoryId(newId)
-    if (!editing) {
-      const cat = categories?.find((c) => c.id === newId)
-      if (cat) setLifespanMonths(cat.defaultLifespanMonths)
-    }
+  const itemTypeSuggestions = useMemo(() => {
+    const q = itemTypeQuery.trim().toLowerCase()
+    if (!q) return ITEM_TYPES
+    return ITEM_TYPES.filter((t) => t.name.toLowerCase().includes(q))
+  }, [itemTypeQuery])
+
+  function pickItemType(type: ItemType) {
+    setItemTypeQuery(type.name)
+    setShowItemTypeSuggestions(false)
+    setIcon(type.icon)
+    setLifespanMonths(type.defaultLifespanMonths)
+
+    const sameTypeCount = (items ?? []).filter((i) =>
+      i.name.toLowerCase().startsWith(type.name.toLowerCase()),
+    ).length
+    setName(sameTypeCount > 0 ? `${type.name} ${sameTypeCount + 1}` : type.name)
   }
 
   async function onSubmit(e: React.FormEvent) {
@@ -51,6 +65,7 @@ export function ItemForm() {
     const payload = {
       categoryId,
       name: name.trim(),
+      icon,
       lifespanMonths,
       quantity,
       status: 'active' as const,
@@ -77,12 +92,12 @@ export function ItemForm() {
 
       <div>
         <label className="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300">Categoria</label>
-        <div className="grid grid-cols-4 gap-2">
+        <div className="grid grid-cols-3 gap-2">
           {categories?.map((cat) => (
             <button
               type="button"
               key={cat.id}
-              onClick={() => onCategoryChange(cat.id)}
+              onClick={() => setCategoryId(cat.id)}
               className={`flex flex-col items-center gap-1 rounded-lg border p-2 text-[11px] ${
                 categoryId === cat.id
                   ? 'border-violet-500 bg-violet-50 text-violet-700 dark:bg-violet-950 dark:text-violet-300'
@@ -94,6 +109,40 @@ export function ItemForm() {
             </button>
           ))}
         </div>
+      </div>
+
+      <div className="relative">
+        <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">
+          Item
+          <input
+            value={itemTypeQuery}
+            onChange={(e) => {
+              setItemTypeQuery(e.target.value)
+              setShowItemTypeSuggestions(true)
+            }}
+            onFocus={() => setShowItemTypeSuggestions(true)}
+            onBlur={() => setTimeout(() => setShowItemTypeSuggestions(false), 150)}
+            placeholder="Ex.: Fone de ouvido"
+            autoComplete="off"
+            className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-base font-normal text-slate-900 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-50"
+          />
+        </label>
+        {showItemTypeSuggestions && itemTypeSuggestions.length > 0 && (
+          <ul className="absolute z-10 mt-1 max-h-56 w-full overflow-y-auto rounded-lg border border-slate-200 bg-white shadow-lg dark:border-slate-700 dark:bg-slate-900">
+            {itemTypeSuggestions.map((type) => (
+              <li key={type.name}>
+                <button
+                  type="button"
+                  onMouseDown={() => pickItemType(type)}
+                  className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-slate-700 hover:bg-violet-50 dark:text-slate-300 dark:hover:bg-violet-950"
+                >
+                  <CategoryIcon name={type.icon} className="h-4 w-4 text-violet-500" />
+                  {type.name}
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
       </div>
 
       <label className="flex flex-col gap-1 text-sm font-medium text-slate-700 dark:text-slate-300">

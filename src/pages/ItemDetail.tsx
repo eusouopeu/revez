@@ -124,7 +124,7 @@ export function ItemDetail() {
 
       <div className="flex items-center gap-3">
         <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-violet-100 dark:bg-violet-900">
-          <CategoryIcon name={category?.icon ?? 'CubeIcon'} className="h-6 w-6 text-violet-600 dark:text-violet-300" />
+          <CategoryIcon name={item.icon ?? category?.icon ?? 'CubeIcon'} className="h-6 w-6 text-violet-600 dark:text-violet-300" />
         </div>
         <div>
           <h1 className="text-xl font-bold text-slate-900 dark:text-slate-50">{item.name}</h1>

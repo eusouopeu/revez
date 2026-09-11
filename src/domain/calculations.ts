@@ -218,6 +218,52 @@ export function projectionByMonth(
   return buckets
 }
 
+export interface CategoryProvision {
+  categoryId: string
+  total: number
+}
+
+/** Monthly provision total for each active item, grouped by category. */
+export function provisionByCategory(
+  items: Item[],
+  purchases: Purchase[],
+  settings: ProvisioningSettings,
+  today: Date,
+): CategoryProvision[] {
+  const totals = new Map<string, number>()
+  for (const item of items.filter((i) => i.status === 'active')) {
+    const provision = monthlyProvision(item, purchases, settings, today)
+    if (provision == null) continue
+    totals.set(item.categoryId, (totals.get(item.categoryId) ?? 0) + provision)
+  }
+  return [...totals.entries()]
+    .map(([categoryId, total]) => ({ categoryId, total }))
+    .sort((a, b) => b.total - a.total)
+}
+
+export interface MonthSpend {
+  /** "YYYY-MM" */
+  month: string
+  total: number
+}
+
+/** Actual amount spent on registered purchases per month, most recent `monthsBack` months (oldest first). */
+export function historicalSpendByMonth(purchases: Purchase[], today: Date, monthsBack = 6): MonthSpend[] {
+  const buckets: MonthSpend[] = Array.from({ length: monthsBack }, (_, i) => {
+    const d = addMonths(new Date(today.getFullYear(), today.getMonth(), 1), i - (monthsBack - 1))
+    return { month: `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`, total: 0 }
+  })
+
+  for (const purchase of purchases) {
+    const d = parseISODate(purchase.date)
+    const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
+    const bucket = buckets.find((b) => b.month === key)
+    if (bucket) bucket.total += purchase.unitPrice * purchase.quantity
+  }
+
+  return buckets
+}
+
 export type ItemUrgency = 'overdue' | 'due-soon' | 'ok' | 'unscheduled'
 
 export function urgencyOf(item: Item, purchases: Purchase[], today: Date, reminderLeadDays: number): ItemUrgency {

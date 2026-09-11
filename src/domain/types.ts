@@ -9,6 +9,8 @@ export interface Item {
   id: string
   categoryId: string
   name: string
+  /** Heroicon name carried over from the item-type suggestion picked in the form, if any. */
+  icon?: string
   lifespanMonths: number
   quantity: number
   status: 'active' | 'archived'
