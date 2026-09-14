@@ -90,26 +90,21 @@ export function ItemForm() {
         {editing ? 'Editar item' : 'Novo item'}
       </h1>
 
-      <div>
-        <label className="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300">Categoria</label>
-        <div className="grid grid-cols-3 gap-2">
+      <label className="flex flex-col gap-1 text-sm font-medium text-slate-700 dark:text-slate-300">
+        Categoria
+        <select
+          value={categoryId}
+          onChange={(e) => setCategoryId(e.target.value)}
+          required
+          className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-base font-normal text-slate-900 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-50"
+        >
           {categories?.map((cat) => (
-            <button
-              type="button"
-              key={cat.id}
-              onClick={() => setCategoryId(cat.id)}
-              className={`flex flex-col items-center gap-1 rounded-lg border p-2 text-[11px] ${
-                categoryId === cat.id
-                  ? 'border-violet-500 bg-violet-50 text-violet-700 dark:bg-violet-950 dark:text-violet-300'
-                  : 'border-slate-200 text-slate-600 dark:border-slate-700 dark:text-slate-400'
-              }`}
-            >
-              <CategoryIcon name={cat.icon} className="h-5 w-5" />
-              <span className="truncate">{cat.name}</span>
-            </button>
+            <option key={cat.id} value={cat.id}>
+              {cat.name}
+            </option>
           ))}
-        </div>
-      </div>
+        </select>
+      </label>
 
       <div className="relative">
         <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">

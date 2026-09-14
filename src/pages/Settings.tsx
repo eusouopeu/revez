@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useSettings } from '../hooks/useAppData'
-import { db } from '../db/db'
+import { db, deleteDemoData, hasDemoData } from '../db/db'
+import { useLiveQuery } from 'dexie-react-hooks'
 import type { AppSettings, Category, Contribution, Item, Purchase } from '../domain/types'
 
 const BACKUP_VERSION = 1
@@ -27,6 +28,7 @@ export function Settings() {
   const [provisioningMethod, setProvisioningMethod] = useState<AppSettings['provisioningMethod']>('per-item')
   const [importStatus, setImportStatus] = useState<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const demoPresent = useLiveQuery(hasDemoData, [], false)
   const loadedRef = useRef(false)
 
   useEffect(() => {
@@ -228,6 +230,24 @@ export function Settings() {
         <input ref={fileInputRef} type="file" accept="application/json" onChange={onImportFile} className="hidden" />
         {importStatus && <p className="text-xs text-slate-500">{importStatus}</p>}
       </div>
+
+      {demoPresent && (
+        <div className="flex flex-col gap-2 border-t border-slate-200 pt-5 dark:border-slate-800">
+          <p className="text-sm font-medium text-slate-700 dark:text-slate-300">Dados de exemplo</p>
+          <p className="text-xs text-slate-400">
+            O app veio com itens, compras e aportes fictícios para demonstração. Seus próprios registros não são
+            afetados.
+          </p>
+          <button
+            onClick={async () => {
+              if (confirm('Apagar todos os dados de exemplo?')) await deleteDemoData()
+            }}
+            className="rounded-lg border border-red-300 py-2 text-sm font-semibold text-red-600 dark:border-red-900 dark:text-red-400"
+          >
+            Apagar dados de exemplo
+          </button>
+        </div>
+      )}
     </div>
   )
 }

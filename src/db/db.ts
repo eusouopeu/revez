@@ -94,4 +94,46 @@ export async function seedIfEmpty(): Promise<void> {
 
   const categoryCount = await db.categories.count()
   if (categoryCount === 0) await db.categories.bulkPut(DEFAULT_CATEGORIES)
+
+  await seedDemoDataOnce()
+}
+
+const DEMO_SEEDED_KEY = 'revez-demo-seeded-v1'
+const DEMO_PREFIX = 'demo-'
+
+/**
+ * Inserts the sample dataset the first time this app version runs, so every
+ * screen has something to show. A localStorage flag keeps it from coming back
+ * after the user deletes it.
+ */
+async function seedDemoDataOnce(): Promise<void> {
+  try {
+    if (localStorage.getItem(DEMO_SEEDED_KEY)) return
+  } catch {
+    return
+  }
+  const { buildDemoData } = await import('./demoData')
+  const { items, purchases, contributions } = buildDemoData(new Date())
+  await db.transaction('rw', db.items, db.purchases, db.contributions, async () => {
+    await db.items.bulkPut(items)
+    await db.purchases.bulkPut(purchases)
+    await db.contributions.bulkPut(contributions)
+  })
+  try {
+    localStorage.setItem(DEMO_SEEDED_KEY, new Date().toISOString())
+  } catch {
+    // ignore
+  }
+}
+
+export async function hasDemoData(): Promise<boolean> {
+  return (await db.items.filter((i) => i.id.startsWith(DEMO_PREFIX)).count()) > 0
+}
+
+export async function deleteDemoData(): Promise<void> {
+  await db.transaction('rw', db.items, db.purchases, db.contributions, async () => {
+    await db.items.filter((i) => i.id.startsWith(DEMO_PREFIX)).delete()
+    await db.purchases.filter((p) => p.id.startsWith(DEMO_PREFIX)).delete()
+    await db.contributions.filter((c) => c.id.startsWith(DEMO_PREFIX)).delete()
+  })
 }
