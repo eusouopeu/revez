@@ -2,7 +2,17 @@ import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { useEffect, useState } from 'react'
 import { useCategories, useContributionsForItem, useItems, usePurchasesForItem, useSettings } from '../hooks/useAppData'
 import { db } from '../db/db'
-import { monthlyProvision, nextReplacementDate, projectedPrice, savedForItem, targetCost } from '../domain/calculations'
+import {
+  activePostponementMonths,
+  monthlyProvision,
+  nextReplacementDate,
+  observedLifespanMonths,
+  postponementFor,
+  projectedPrice,
+  savedForItem,
+  targetCost,
+  urgencyOf,
+} from '../domain/calculations'
 import { formatBRL, formatDate, todayISO } from '../domain/format'
 import { CategoryIcon } from '../components/IconBadge'
 import { ArrowLeftIcon, PencilIcon, TrashIcon, ArchiveBoxIcon } from '@heroicons/react/24/outline'
@@ -21,6 +31,7 @@ export function ItemDetail() {
   const [editingPurchaseId, setEditingPurchaseId] = useState<string | null>(null)
   const [price, setPrice] = useState('')
   const [date, setDate] = useState(todayISO())
+  const [note, setNote] = useState('')
 
   const [showContributionForm, setShowContributionForm] = useState(false)
   const [contributionAmount, setContributionAmount] = useState('')
@@ -46,11 +57,35 @@ export function ItemDetail() {
   const saved = savedForItem(item, purchases, contributions)
   const goal = targetCost(item, purchases, settings, today)
   const progressPct = goal && goal > 0 ? Math.min(100, (saved / goal) * 100) : 0
+  const urgency = urgencyOf(item, purchases, today, settings.reminderLeadDays)
+  const postponedMonths = activePostponementMonths(item, purchases)
+  const observed = observedLifespanMonths(item, purchases)
+  const observedRounded = observed != null ? Math.max(1, Math.round(observed)) : undefined
+  const suggestLifespan =
+    observedRounded != null &&
+    Math.abs(observedRounded - item.lifespanMonths) >= Math.max(2, item.lifespanMonths * 0.2)
 
-  function startEditPurchase(p: { id: string; date: string; unitPrice: number }) {
+  async function postpone(months: number) {
+    if (!item) return
+    const postponement = postponementFor(item, purchases, today, months)
+    if (postponement) await db.items.update(item.id, { postponement })
+  }
+
+  async function undoPostpone() {
+    if (!item) return
+    await db.items.update(item.id, { postponement: undefined })
+  }
+
+  async function applyObservedLifespan() {
+    if (!item || observedRounded == null) return
+    await db.items.update(item.id, { lifespanMonths: observedRounded })
+  }
+
+  function startEditPurchase(p: { id: string; date: string; unitPrice: number; note?: string }) {
     setEditingPurchaseId(p.id)
     setDate(p.date)
     setPrice(p.unitPrice.toString())
+    setNote(p.note ?? '')
     setShowPurchaseForm(true)
   }
 
@@ -58,6 +93,7 @@ export function ItemDetail() {
     setShowPurchaseForm(false)
     setEditingPurchaseId(null)
     setPrice('')
+    setNote('')
     setDate(todayISO())
   }
 
@@ -65,7 +101,7 @@ export function ItemDetail() {
     e.preventDefault()
     if (!price || !item) return
     if (editingPurchaseId) {
-      await db.purchases.update(editingPurchaseId, { date, unitPrice: Number(price) })
+      await db.purchases.update(editingPurchaseId, { date, unitPrice: Number(price), note: note.trim() || undefined })
     } else {
       await db.purchases.add({
         id: crypto.randomUUID(),
@@ -73,6 +109,7 @@ export function ItemDetail() {
         date,
         unitPrice: Number(price),
         quantity: item.quantity,
+        note: note.trim() || undefined,
       })
     }
     cancelPurchaseForm()
@@ -153,6 +190,48 @@ export function ItemDetail() {
         </div>
       </div>
 
+      {item.status === 'active' && (urgency === 'overdue' || urgency === 'due-soon') && (
+        <div className="mt-3 rounded-xl border border-amber-200 bg-amber-50 p-3 dark:border-amber-900 dark:bg-amber-950">
+          <p className="text-sm font-medium text-amber-800 dark:text-amber-200">Ainda está bom?</p>
+          <p className="text-xs text-amber-700 dark:text-amber-300">Adie a troca sem registrar compra.</p>
+          <div className="mt-2 flex gap-2">
+            {[1, 3, 6].map((m) => (
+              <button
+                key={m}
+                onClick={() => postpone(m)}
+                className="flex-1 rounded-lg border border-amber-300 bg-white py-1.5 text-sm font-semibold text-amber-700 dark:border-amber-800 dark:bg-slate-900 dark:text-amber-300"
+              >
+                +{m} {m === 1 ? 'mês' : 'meses'}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {postponedMonths > 0 && (
+        <p className="mt-2 text-xs text-slate-500">
+          Troca adiada em {postponedMonths} {postponedMonths === 1 ? 'mês' : 'meses'} neste ciclo.{' '}
+          <button onClick={undoPostpone} className="font-medium text-violet-600 underline dark:text-violet-400">
+            Desfazer
+          </button>
+        </p>
+      )}
+
+      {suggestLifespan && (
+        <div className="mt-3 rounded-xl border border-sky-200 bg-sky-50 p-3 text-sm dark:border-sky-900 dark:bg-sky-950">
+          <p className="text-sky-800 dark:text-sky-200">
+            Pelo histórico, este item tem durado cerca de <strong>{observedRounded} meses</strong>, não{' '}
+            {item.lifespanMonths}.
+          </p>
+          <button
+            onClick={applyObservedLifespan}
+            className="mt-2 rounded-lg bg-sky-600 px-3 py-1.5 text-xs font-semibold text-white"
+          >
+            Ajustar vida útil para {observedRounded} meses
+          </button>
+        </div>
+      )}
+
       {goal != null && goal > 0 && (
         <div className="mt-3 rounded-xl border border-slate-200 p-3 dark:border-slate-800">
           <div className="flex items-baseline justify-between">
@@ -223,6 +302,15 @@ export function ItemDetail() {
               />
             </label>
           </div>
+          <label className="flex flex-col gap-1 text-sm font-medium text-slate-700 dark:text-slate-300">
+            Observação
+            <input
+              value={note}
+              onChange={(e) => setNote(e.target.value)}
+              placeholder="opcional — marca, loja, modelo…"
+              className="rounded-lg border border-slate-300 px-3 py-2 text-base font-normal dark:border-slate-700 dark:bg-slate-900"
+            />
+          </label>
           <div className="flex gap-2">
             <button type="submit" className="flex-1 rounded-lg bg-slate-900 py-2 text-sm font-semibold text-white dark:bg-slate-100 dark:text-slate-900">
               {editingPurchaseId ? 'Salvar alterações' : 'Salvar compra'}
@@ -244,8 +332,11 @@ export function ItemDetail() {
         <ul className="flex flex-col gap-2">
           {[...purchases].reverse().map((p) => (
             <li key={p.id} className="flex items-center justify-between gap-2 rounded-lg border border-slate-200 px-3 py-2 text-sm dark:border-slate-800">
-              <span className="text-slate-600 dark:text-slate-300">{formatDate(p.date)}</span>
-              <span className="flex-1 text-right font-medium text-slate-900 dark:text-slate-50">{formatBRL(p.unitPrice)}</span>
+              <span className="min-w-0 flex-1">
+                <span className="block text-slate-600 dark:text-slate-300">{formatDate(p.date)}</span>
+                {p.note && <span className="block truncate text-xs text-slate-400">{p.note}</span>}
+              </span>
+              <span className="text-right font-medium text-slate-900 dark:text-slate-50">{formatBRL(p.unitPrice)}</span>
               <button onClick={() => startEditPurchase(p)} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">
                 <PencilIcon className="h-4 w-4" />
               </button>

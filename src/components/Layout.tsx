@@ -29,16 +29,22 @@ export function Layout() {
             key={to}
             to={to}
             end={end}
-            aria-label={label}
-            className="flex flex-1 flex-col items-center gap-0.5 py-3"
+            className="flex flex-1 flex-col items-center gap-0.5 pb-2 pt-2.5"
           >
-            {({ isActive }) =>
-              isActive ? (
-                <Active className="h-6 w-6 text-violet-600 dark:text-violet-400" />
-              ) : (
-                <Icon className="h-6 w-6 text-slate-400" />
-              )
-            }
+            {({ isActive }) => (
+              <>
+                {isActive ? (
+                  <Active className="h-6 w-6 text-violet-600 dark:text-violet-400" />
+                ) : (
+                  <Icon className="h-6 w-6 text-slate-400" />
+                )}
+                <span
+                  className={`text-[11px] font-medium ${isActive ? 'text-violet-600 dark:text-violet-400' : 'text-slate-500'}`}
+                >
+                  {label}
+                </span>
+              </>
+            )}
           </NavLink>
         ))}
       </nav>

@@ -1,8 +1,9 @@
 import { useNavigate, useParams } from 'react-router-dom'
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useCategories, useItems } from '../hooks/useAppData'
 import { db, ITEM_TYPES, type ItemType } from '../db/db'
 import { todayISO } from '../domain/format'
+import { filterItemTypes, matchItemType } from '../domain/itemTypeMatch'
 import { CategoryIcon } from '../components/IconBadge'
 
 export function ItemForm() {
@@ -13,8 +14,7 @@ export function ItemForm() {
   const editing = id ? items?.find((i) => i.id === id) : undefined
 
   const [categoryId, setCategoryId] = useState('')
-  const [itemTypeQuery, setItemTypeQuery] = useState('')
-  const [showItemTypeSuggestions, setShowItemTypeSuggestions] = useState(false)
+  const [showSuggestions, setShowSuggestions] = useState(false)
   const [icon, setIcon] = useState<string | undefined>(undefined)
   const [name, setName] = useState('')
   const [lifespanMonths, setLifespanMonths] = useState(12)
@@ -22,11 +22,12 @@ export function ItemForm() {
   const [estimatedLastPurchaseDate, setEstimatedLastPurchaseDate] = useState(todayISO())
   const [estimatedLastPrice, setEstimatedLastPrice] = useState('')
   const [manualTargetPrice, setManualTargetPrice] = useState('')
+  /** Catalog entry last applied to icon/lifespan/category, so typing more words doesn't re-apply it over manual edits. */
+  const appliedType = useRef<string | undefined>(undefined)
 
   useEffect(() => {
     if (editing) {
       setCategoryId(editing.categoryId)
-      setItemTypeQuery('')
       setIcon(editing.icon)
       setName(editing.name)
       setLifespanMonths(editing.lifespanMonths)
@@ -34,26 +35,36 @@ export function ItemForm() {
       setEstimatedLastPurchaseDate(editing.estimatedLastPurchaseDate ?? todayISO())
       setEstimatedLastPrice(editing.estimatedLastPrice?.toString() ?? '')
       setManualTargetPrice(editing.manualTargetPrice?.toString() ?? '')
+      appliedType.current = matchItemType(editing.name, ITEM_TYPES)?.name
     } else if (categories && categories.length > 0 && !categoryId) {
-      setCategoryId(categories[0].id)
+      setCategoryId(categories.find((c) => !c.hidden)?.id ?? categories[0].id)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [editing, categories])
 
-  const itemTypeSuggestions = useMemo(() => {
-    const q = itemTypeQuery.trim().toLowerCase()
-    if (!q) return ITEM_TYPES
-    return ITEM_TYPES.filter((t) => t.name.toLowerCase().includes(q))
-  }, [itemTypeQuery])
+  const suggestions = useMemo(() => filterItemTypes(name, ITEM_TYPES), [name])
+  const matched = useMemo(() => matchItemType(name, ITEM_TYPES), [name])
+  const selectableCategories = (categories ?? []).filter((c) => !c.hidden || c.id === categoryId)
 
-  function pickItemType(type: ItemType) {
-    setItemTypeQuery(type.name)
-    setShowItemTypeSuggestions(false)
+  function applyType(type: ItemType) {
+    appliedType.current = type.name
     setIcon(type.icon)
     setLifespanMonths(type.defaultLifespanMonths)
+    if (categories?.some((c) => c.id === type.categoryId)) setCategoryId(type.categoryId)
+  }
 
-    const sameTypeCount = (items ?? []).filter((i) =>
-      i.name.toLowerCase().startsWith(type.name.toLowerCase()),
+  function onNameChange(value: string) {
+    setName(value)
+    setShowSuggestions(true)
+    const type = matchItemType(value, ITEM_TYPES)
+    if (type && type.name !== appliedType.current) applyType(type)
+  }
+
+  function pickSuggestion(type: ItemType) {
+    setShowSuggestions(false)
+    applyType(type)
+    const sameTypeCount = (items ?? []).filter(
+      (i) => i.id !== editing?.id && matchItemType(i.name, ITEM_TYPES)?.name === type.name,
     ).length
     setName(sameTypeCount > 0 ? `${type.name} ${sameTypeCount + 1}` : type.name)
   }
@@ -68,7 +79,7 @@ export function ItemForm() {
       icon,
       lifespanMonths,
       quantity,
-      status: 'active' as const,
+      status: editing?.status ?? ('active' as const),
       estimatedLastPurchaseDate: estimatedLastPurchaseDate || undefined,
       estimatedLastPrice: estimatedLastPrice ? Number(estimatedLastPrice) : undefined,
       manualTargetPrice: manualTargetPrice ? Number(manualTargetPrice) : undefined,
@@ -84,51 +95,50 @@ export function ItemForm() {
     }
   }
 
+  // Hide the list once the name already contains a full suggestion — it has done its job.
+  const suggestionsVisible = showSuggestions && suggestions.length > 0 && !matched
+
   return (
     <form onSubmit={onSubmit} className="flex flex-col gap-5 px-4 pt-6">
       <h1 className="text-xl font-bold text-slate-900 dark:text-slate-50">
         {editing ? 'Editar item' : 'Novo item'}
       </h1>
 
-      <label className="flex flex-col gap-1 text-sm font-medium text-slate-700 dark:text-slate-300">
-        Categoria
-        <select
-          value={categoryId}
-          onChange={(e) => setCategoryId(e.target.value)}
-          required
-          className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-base font-normal text-slate-900 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-50"
-        >
-          {categories?.map((cat) => (
-            <option key={cat.id} value={cat.id}>
-              {cat.name}
-            </option>
-          ))}
-        </select>
-      </label>
-
       <div className="relative">
-        <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">
-          Item
-          <input
-            value={itemTypeQuery}
-            onChange={(e) => {
-              setItemTypeQuery(e.target.value)
-              setShowItemTypeSuggestions(true)
-            }}
-            onFocus={() => setShowItemTypeSuggestions(true)}
-            onBlur={() => setTimeout(() => setShowItemTypeSuggestions(false), 150)}
-            placeholder="Ex.: Fone de ouvido"
-            autoComplete="off"
-            className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-base font-normal text-slate-900 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-50"
-          />
+        <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">
+          Nome do item
+          <div className="relative mt-1">
+            {icon && (
+              <CategoryIcon
+                name={icon}
+                className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-violet-500"
+              />
+            )}
+            <input
+              value={name}
+              onChange={(e) => onNameChange(e.target.value)}
+              onFocus={() => setShowSuggestions(true)}
+              onBlur={() => setTimeout(() => setShowSuggestions(false), 150)}
+              placeholder="Ex.: Fone de ouvido Bluetooth"
+              autoComplete="off"
+              required
+              className={`w-full rounded-lg border border-slate-300 py-2 pr-3 text-base font-normal text-slate-900 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-50 ${icon ? 'pl-9' : 'pl-3'}`}
+            />
+          </div>
         </label>
-        {showItemTypeSuggestions && itemTypeSuggestions.length > 0 && (
+        {matched && (
+          <p className="mt-1 text-xs text-slate-500">
+            Reconhecido como <span className="font-medium text-violet-600 dark:text-violet-400">{matched.name}</span>:
+            ícone, vida útil e categoria preenchidos.
+          </p>
+        )}
+        {suggestionsVisible && (
           <ul className="absolute z-10 mt-1 max-h-56 w-full overflow-y-auto rounded-lg border border-slate-200 bg-white shadow-lg dark:border-slate-700 dark:bg-slate-900">
-            {itemTypeSuggestions.map((type) => (
+            {suggestions.map((type) => (
               <li key={type.name}>
                 <button
                   type="button"
-                  onMouseDown={() => pickItemType(type)}
+                  onMouseDown={() => pickSuggestion(type)}
                   className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-slate-700 hover:bg-violet-50 dark:text-slate-300 dark:hover:bg-violet-950"
                 >
                   <CategoryIcon name={type.icon} className="h-4 w-4 text-violet-500" />
@@ -141,14 +151,19 @@ export function ItemForm() {
       </div>
 
       <label className="flex flex-col gap-1 text-sm font-medium text-slate-700 dark:text-slate-300">
-        Nome do item
-        <input
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          placeholder="Ex.: Fone Bluetooth"
+        Categoria
+        <select
+          value={categoryId}
+          onChange={(e) => setCategoryId(e.target.value)}
           required
-          className="rounded-lg border border-slate-300 px-3 py-2 text-base font-normal text-slate-900 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-50"
-        />
+          className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-base font-normal text-slate-900 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-50"
+        >
+          {selectableCategories.map((cat) => (
+            <option key={cat.id} value={cat.id}>
+              {cat.name}
+            </option>
+          ))}
+        </select>
       </label>
 
       <div className="grid grid-cols-2 gap-3">

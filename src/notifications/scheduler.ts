@@ -19,6 +19,18 @@ function idFor(itemId: string, kind: 'lead' | 'due'): number {
 
 const DIGEST_NOTIFICATION_ID = 999_999_999
 
+/** Dashboard route that opens the monthly deposit form. */
+export const DEPOSIT_ROUTE = '/?guardar=1'
+
+/** Opens the route carried by a tapped notification (the monthly digest opens the deposit form). */
+export function listenForNotificationTaps(): void {
+  if (!isSupported()) return
+  LocalNotifications.addListener('localNotificationActionPerformed', (event) => {
+    const route = event.notification.extra?.route
+    if (typeof route === 'string') window.location.hash = `#${route}`
+  })
+}
+
 function isSupported(): boolean {
   return Capacitor.isNativePlatform()
 }
@@ -50,14 +62,14 @@ export async function syncNotifications(
     if (requested.display !== 'granted') return
   }
 
-  const activeItems = items.filter((i) => i.status === 'active')
-  const idsToCancel = activeItems.flatMap((item) => [
-    { id: idFor(item.id, 'lead') },
-    { id: idFor(item.id, 'due') },
-  ])
-  idsToCancel.push({ id: DIGEST_NOTIFICATION_ID })
-  await LocalNotifications.cancel({ notifications: idsToCancel })
+  // Cancel everything still pending, not just active items' ids: an item
+  // archived or deleted since the last sync would otherwise keep firing.
+  const pending = await LocalNotifications.getPending()
+  if (pending.notifications.length > 0) {
+    await LocalNotifications.cancel({ notifications: pending.notifications.map((n) => ({ id: n.id })) })
+  }
 
+  const activeItems = items.filter((i) => i.status === 'active')
   const notifications: Parameters<typeof LocalNotifications.schedule>[0]['notifications'] = []
 
   for (const item of activeItems) {
@@ -88,7 +100,8 @@ export async function syncNotifications(
   notifications.push({
     id: DIGEST_NOTIFICATION_ID,
     title: 'Resumo mensal do Revez',
-    body: `Guarde ${formatBRL(totalMonthly)} este mês para manter suas trocas em dia.`,
+    body: `Guarde ${formatBRL(totalMonthly)} este mês para manter suas trocas em dia. Toque para registrar.`,
+    extra: { route: DEPOSIT_ROUTE },
     schedule: { at: nextMonthlyOccurrence(settings.monthlyDigestDayOfMonth, today), repeats: true, every: 'month' },
   })
 

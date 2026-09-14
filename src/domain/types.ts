@@ -3,6 +3,18 @@ export interface Category {
   name: string
   icon: string // heroicon name, e.g. "SpeakerWaveIcon"
   defaultLifespanMonths: number
+  /** Hidden categories are left out of the item form and the dashboard filter; their items are kept. */
+  hidden?: boolean
+}
+
+/**
+ * Extra months granted to the current replacement cycle ("ainda está bom").
+ * Bound to the cycle anchor it was created for, so registering a new
+ * purchase (which moves the anchor) discards it automatically.
+ */
+export interface Postponement {
+  cycleStart: string // ISO date
+  months: number
 }
 
 export interface Item {
@@ -19,6 +31,7 @@ export interface Item {
   estimatedLastPrice?: number
   /** Overrides all price projection when set. */
   manualTargetPrice?: number
+  postponement?: Postponement
   createdAt: string
 }
 

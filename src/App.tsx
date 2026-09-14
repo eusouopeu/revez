@@ -8,12 +8,14 @@ import { Settings } from './pages/Settings'
 import { DataPage } from './pages/Data'
 import { seedIfEmpty } from './db/db'
 import { useNotificationsSync } from './hooks/useNotificationsSync'
+import { listenForNotificationTaps } from './notifications/scheduler'
 
 export default function App() {
   const [ready, setReady] = useState(false)
 
   useEffect(() => {
     seedIfEmpty().then(() => setReady(true))
+    listenForNotificationTaps()
   }, [])
 
   useNotificationsSync()

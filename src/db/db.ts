@@ -70,22 +70,23 @@ export const DEFAULT_CATEGORIES: Category[] = [
   { id: 'outros', name: 'Outros', icon: 'EllipsisHorizontalCircleIcon', defaultLifespanMonths: 12 },
 ]
 
-/** Suggestion catalog for the "Item" autocomplete in the item form. */
+/** Suggestion catalog for the item name field in the item form. */
 export interface ItemType {
   name: string
   icon: string
+  categoryId: string
   defaultLifespanMonths: number
 }
 
 export const ITEM_TYPES: ItemType[] = [
-  { name: 'Fone de ouvido', icon: 'SpeakerWaveIcon', defaultLifespanMonths: 24 },
-  { name: 'Travesseiro', icon: 'MoonIcon', defaultLifespanMonths: 18 },
-  { name: 'Roupa de cama', icon: 'Square3Stack3DIcon', defaultLifespanMonths: 36 },
-  { name: 'Meias', icon: 'SwatchIcon', defaultLifespanMonths: 12 },
-  { name: 'Tênis', icon: 'BoltIcon', defaultLifespanMonths: 12 },
-  { name: 'Óculos', icon: 'EyeIcon', defaultLifespanMonths: 24 },
-  { name: 'Escova de dentes', icon: 'SparklesIcon', defaultLifespanMonths: 3 },
-  { name: 'Toalhas', icon: 'Square2StackIcon', defaultLifespanMonths: 24 },
+  { name: 'Fone de ouvido', icon: 'SpeakerWaveIcon', categoryId: 'eletronicos', defaultLifespanMonths: 24 },
+  { name: 'Travesseiro', icon: 'MoonIcon', categoryId: 'cama-mesa-banho', defaultLifespanMonths: 18 },
+  { name: 'Roupa de cama', icon: 'Square3Stack3DIcon', categoryId: 'cama-mesa-banho', defaultLifespanMonths: 36 },
+  { name: 'Meias', icon: 'SwatchIcon', categoryId: 'roupas', defaultLifespanMonths: 12 },
+  { name: 'Tênis', icon: 'BoltIcon', categoryId: 'roupas', defaultLifespanMonths: 12 },
+  { name: 'Óculos', icon: 'EyeIcon', categoryId: 'outros', defaultLifespanMonths: 24 },
+  { name: 'Escova de dentes', icon: 'SparklesIcon', categoryId: 'outros', defaultLifespanMonths: 3 },
+  { name: 'Toalhas', icon: 'Square2StackIcon', categoryId: 'cama-mesa-banho', defaultLifespanMonths: 24 },
 ]
 
 export async function seedIfEmpty(): Promise<void> {

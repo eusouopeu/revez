@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
-import { useSettings } from '../hooks/useAppData'
+import { useCategories, useSettings } from '../hooks/useAppData'
+import { CategoryIcon } from '../components/IconBadge'
 import { db, deleteDemoData, hasDemoData } from '../db/db'
 import { useLiveQuery } from 'dexie-react-hooks'
 import type { AppSettings, Category, Contribution, Item, Purchase } from '../domain/types'
@@ -130,6 +131,8 @@ export function Settings() {
     <div className="flex flex-col gap-5 px-4 pt-6">
       <h1 className="text-xl font-bold text-slate-900 dark:text-slate-50">Ajustes</h1>
 
+      <CategoriesSection />
+
       <label className="flex flex-col gap-1 text-sm font-medium text-slate-700 dark:text-slate-300">
         Correção anual estimada (inflação, %)
         <input
@@ -248,6 +251,72 @@ export function Settings() {
           </button>
         </div>
       )}
+    </div>
+  )
+}
+
+function CategoriesSection() {
+  const categories = useCategories()
+  const items = useLiveQuery(() => db.items.toArray(), [], [])
+  const [newName, setNewName] = useState('')
+
+  async function rename(category: Category, name: string) {
+    const trimmed = name.trim()
+    if (trimmed && trimmed !== category.name) await db.categories.update(category.id, { name: trimmed })
+  }
+
+  async function add(e: React.FormEvent) {
+    e.preventDefault()
+    const name = newName.trim()
+    if (!name) return
+    await db.categories.add({ id: crypto.randomUUID(), name, icon: 'TagIcon', defaultLifespanMonths: 12 })
+    setNewName('')
+  }
+
+  return (
+    <div className="flex flex-col gap-2 border-b border-slate-200 pb-5 dark:border-slate-800">
+      <p className="text-sm font-medium text-slate-700 dark:text-slate-300">Categorias</p>
+      <p className="text-xs text-slate-400">
+        Toque no nome para renomear. Categorias ocultas somem do cadastro e dos filtros; os itens delas continuam.
+      </p>
+      <ul className="flex flex-col gap-2">
+        {categories?.map((category) => {
+          const count = items?.filter((i) => i.categoryId === category.id).length ?? 0
+          return (
+            <li
+              key={category.id}
+              className={`flex items-center gap-2 rounded-lg border border-slate-200 px-3 py-1.5 dark:border-slate-800 ${category.hidden ? 'opacity-60' : ''}`}
+            >
+              <CategoryIcon name={category.icon} className="h-4 w-4 shrink-0 text-violet-500" />
+              <input
+                defaultValue={category.name}
+                key={category.name}
+                onBlur={(e) => rename(category, e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && e.currentTarget.blur()}
+                className="min-w-0 flex-1 bg-transparent py-1 text-base text-slate-800 dark:text-slate-100"
+              />
+              <span className="shrink-0 text-xs text-slate-400">{count}</span>
+              <button
+                onClick={() => db.categories.update(category.id, { hidden: !category.hidden })}
+                className="shrink-0 rounded-md border border-slate-300 px-2 py-1 text-xs font-medium text-slate-600 dark:border-slate-700 dark:text-slate-300"
+              >
+                {category.hidden ? 'Mostrar' : 'Ocultar'}
+              </button>
+            </li>
+          )
+        })}
+      </ul>
+      <form onSubmit={add} className="flex gap-2">
+        <input
+          value={newName}
+          onChange={(e) => setNewName(e.target.value)}
+          placeholder="Nova categoria"
+          className="min-w-0 flex-1 rounded-lg border border-slate-300 px-3 py-2 text-base dark:border-slate-700 dark:bg-slate-900 dark:text-slate-50"
+        />
+        <button type="submit" className="rounded-lg bg-violet-600 px-4 text-sm font-semibold text-white">
+          Adicionar
+        </button>
+      </form>
     </div>
   )
 }
