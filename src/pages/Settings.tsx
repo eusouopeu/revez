@@ -26,6 +26,7 @@ import { formatDate } from '../domain/format'
 import { useToday } from '../hooks/useToday'
 import { CategoryIcon } from '../components/IconBadge'
 import { ConfirmDialog } from '../components/ConfirmDialog'
+import { Button } from '../components/Button'
 import type { AppSettings, Category } from '../domain/types'
 
 function clamp(value: number, min: number, max: number): number {
@@ -84,25 +85,25 @@ export function Settings() {
 
   return (
     <div className="flex flex-col gap-5 px-4 pt-6">
-      <h1 className="text-xl font-bold text-slate-900 dark:text-slate-50">Ajustes</h1>
+      <h1 className="text-xl font-bold text-ink">Ajustes</h1>
 
       <CategoriesSection />
 
-      <label className="flex flex-col gap-1 text-sm font-medium text-slate-700 dark:text-slate-300">
+      <label className="flex flex-col gap-1 text-sm font-medium text-sub">
         Correção anual estimada (inflação, %)
         <input
           type="number"
           step="0.1"
           value={inflation}
           onChange={(e) => setInflation(e.target.value)}
-          className="rounded-lg border border-slate-300 px-3 py-2 text-base font-normal dark:border-slate-700 dark:bg-slate-900 dark:text-slate-50"
+          className="rounded-lg border border-line-strong bg-surface px-3 py-2 text-base font-normal text-ink"
         />
-        <span className="text-xs text-slate-600 dark:text-slate-400">
+        <span className="text-xs text-sub">
           Usada para projetar preços com menos de 4 compras registradas.
         </span>
       </label>
 
-      <label className="flex flex-col gap-1 text-sm font-medium text-slate-700 dark:text-slate-300">
+      <label className="flex flex-col gap-1 text-sm font-medium text-sub">
         Avisar com quantos dias de antecedência
         <input
           type="number"
@@ -110,11 +111,11 @@ export function Settings() {
           max={365}
           value={reminderLeadDays}
           onChange={(e) => setReminderLeadDays(Number(e.target.value))}
-          className="rounded-lg border border-slate-300 px-3 py-2 text-base font-normal dark:border-slate-700 dark:bg-slate-900 dark:text-slate-50"
+          className="rounded-lg border border-line-strong bg-surface px-3 py-2 text-base font-normal text-ink"
         />
       </label>
 
-      <label className="flex flex-col gap-1 text-sm font-medium text-slate-700 dark:text-slate-300">
+      <label className="flex flex-col gap-1 text-sm font-medium text-sub">
         Dia do mês para o resumo de poupança
         <input
           type="number"
@@ -122,16 +123,16 @@ export function Settings() {
           max={28}
           value={digestDay}
           onChange={(e) => setDigestDay(Number(e.target.value))}
-          className="rounded-lg border border-slate-300 px-3 py-2 text-base font-normal dark:border-slate-700 dark:bg-slate-900 dark:text-slate-50"
+          className="rounded-lg border border-line-strong bg-surface px-3 py-2 text-base font-normal text-ink"
         />
       </label>
 
       <NotificationsSection />
 
       <div className="flex flex-col gap-2">
-        <p className="text-sm font-medium text-slate-700 dark:text-slate-300">Método de provisão mensal</p>
+        <p className="text-sm font-medium text-sub">Método de provisão mensal</p>
         <div className="flex flex-col gap-2">
-          <label className="flex items-start gap-2 rounded-lg border border-slate-200 p-3 text-sm dark:border-slate-800">
+          <label className="flex items-start gap-2 rounded-lg border border-line p-3 text-sm">
             <input
               type="radio"
               name="provisioningMethod"
@@ -140,14 +141,14 @@ export function Settings() {
               className="mt-0.5"
             />
             <span>
-              <span className="block font-medium text-slate-800 dark:text-slate-200">Por item (padrão)</span>
-              <span className="block text-xs text-slate-600 dark:text-slate-400">
+              <span className="block font-medium text-ink">Por item (padrão)</span>
+              <span className="block text-xs text-sub">
                 Cada item financia exatamente o que falta no tempo que falta. Mais preciso, mas o total pode picar
                 quando um item vence.
               </span>
             </span>
           </label>
-          <label className="flex items-start gap-2 rounded-lg border border-slate-200 p-3 text-sm dark:border-slate-800">
+          <label className="flex items-start gap-2 rounded-lg border border-line p-3 text-sm">
             <input
               type="radio"
               name="provisioningMethod"
@@ -156,8 +157,8 @@ export function Settings() {
               className="mt-0.5"
             />
             <span>
-              <span className="block font-medium text-slate-800 dark:text-slate-200">Custo médio perpétuo</span>
-              <span className="block text-xs text-slate-600 dark:text-slate-400">
+              <span className="block font-medium text-ink">Custo médio perpétuo</span>
+              <span className="block text-xs text-sub">
                 Divide pelo ciclo de vida completo. Número estável mês a mês, mas subfinancia itens comprados perto
                 do fim da vida útil.
               </span>
@@ -169,15 +170,15 @@ export function Settings() {
       <BackupSection />
 
       {demoPresent && (
-        <div className="flex flex-col gap-2 border-t border-slate-200 pt-5 dark:border-slate-800">
-          <p className="text-sm font-medium text-slate-700 dark:text-slate-300">Dados de exemplo</p>
-          <p className="text-xs text-slate-600 dark:text-slate-400">
+        <div className="flex flex-col gap-2 border-t border-line pt-5">
+          <p className="text-sm font-medium text-sub">Dados de exemplo</p>
+          <p className="text-xs text-sub">
             O app veio com itens, compras e aportes fictícios para demonstração. Seus próprios registros não são
             afetados.
           </p>
           <button
             onClick={() => setConfirmDemo(true)}
-            className="min-h-11 rounded-lg border border-red-300 text-sm font-semibold text-red-600 dark:border-red-900 dark:text-red-400"
+            className="min-h-11 rounded-lg border border-erro-soft-line text-sm font-semibold text-erro"
           >
             Apagar dados de exemplo
           </button>
@@ -223,22 +224,22 @@ function NotificationsSection() {
   const supported = notificationsSupported()
 
   return (
-    <div className="flex flex-col gap-2 border-t border-slate-200 pt-5 dark:border-slate-800">
-      <p className="text-sm font-medium text-slate-700 dark:text-slate-300">Notificações</p>
+    <div className="flex flex-col gap-2 border-t border-line pt-5">
+      <p className="text-sm font-medium text-sub">Notificações</p>
       <p
         className={`text-xs font-medium ${
           permission === 'granted'
-            ? 'text-emerald-700 dark:text-emerald-400'
+            ? 'text-ok'
             : permission === 'denied'
-              ? 'text-red-600 dark:text-red-400'
-              : 'text-amber-700 dark:text-amber-400'
+              ? 'text-erro'
+              : 'text-alerta'
         }`}
       >
         {permissionLabel[permission]}
       </p>
 
       {!supported && (
-        <p className="text-xs text-slate-600 dark:text-slate-400">
+        <p className="text-xs text-sub">
           No navegador o app não agenda avisos. Instale o APK para receber os lembretes de troca e o resumo mensal.
         </p>
       )}
@@ -246,7 +247,7 @@ function NotificationsSection() {
       {supported && permission !== 'granted' && (
         <>
           {permission === 'denied' && (
-            <p className="text-xs text-slate-600 dark:text-slate-400">
+            <p className="text-xs text-sub">
               A permissão foi negada. Libere em Ajustes do Android &gt; Apps &gt; Revez &gt; Notificações.
             </p>
           )}
@@ -255,7 +256,7 @@ function NotificationsSection() {
               setPermission(await requestNotificationPermission())
               await refresh()
             }}
-            className="min-h-11 rounded-lg border border-slate-300 text-sm font-semibold text-slate-700 dark:border-slate-700 dark:text-slate-200"
+            className="min-h-11 rounded-lg border border-line-strong text-sm font-semibold text-sub"
           >
             Permitir notificações
           </button>
@@ -269,15 +270,15 @@ function NotificationsSection() {
             setStatus(sent ? 'Teste enviado: o aviso chega em alguns segundos.' : 'Não foi possível enviar o teste.')
             await refresh()
           }}
-          className="min-h-11 rounded-lg border border-slate-300 text-sm font-semibold text-slate-700 dark:border-slate-700 dark:text-slate-200"
+          className="min-h-11 rounded-lg border border-line-strong text-sm font-semibold text-sub"
         >
           Enviar notificação de teste
         </button>
       )}
-      {status && <p className="text-xs text-slate-600 dark:text-slate-400">{status}</p>}
+      {status && <p className="text-xs text-sub">{status}</p>}
 
       {pending.length > 0 && (
-        <details className="text-xs text-slate-600 dark:text-slate-400">
+        <details className="text-xs text-sub">
           <summary className="min-h-11 cursor-pointer py-3 font-medium">
             Próximos avisos agendados ({pending.length})
           </summary>
@@ -350,17 +351,17 @@ function BackupSection() {
   }
 
   return (
-    <div className="flex flex-col gap-2 border-t border-slate-200 pt-5 dark:border-slate-800">
-      <p className="text-sm font-medium text-slate-700 dark:text-slate-300">Backup dos dados</p>
-      <p className="text-xs text-slate-600 dark:text-slate-400">
+    <div className="flex flex-col gap-2 border-t border-line pt-5">
+      <p className="text-sm font-medium text-sub">Backup dos dados</p>
+      <p className="text-xs text-sub">
         Os dados ficam só neste dispositivo. Exporte periodicamente para não perder tudo ao trocar de aparelho ou
         limpar o navegador.
       </p>
       {sinceBackup == null ? (
-        <p className="text-xs font-medium text-amber-700 dark:text-amber-400">Você ainda não exportou nenhum backup.</p>
+        <p className="text-xs font-medium text-alerta">Você ainda não exportou nenhum backup.</p>
       ) : (
         sinceBackup >= EXPORT_REMINDER_DAYS && (
-          <p className="text-xs font-medium text-amber-700 dark:text-amber-400">
+          <p className="text-xs font-medium text-alerta">
             Último backup há {sinceBackup} dias. Vale exportar de novo.
           </p>
         )
@@ -368,13 +369,13 @@ function BackupSection() {
       <div className="flex gap-2">
         <button
           onClick={exportBackup}
-          className="min-h-11 flex-1 rounded-lg border border-slate-300 text-sm font-semibold text-slate-700 dark:border-slate-700 dark:text-slate-200"
+          className="min-h-11 flex-1 rounded-lg border border-line-strong text-sm font-semibold text-sub"
         >
           Exportar backup
         </button>
         <button
           onClick={() => fileInputRef.current?.click()}
-          className="min-h-11 flex-1 rounded-lg border border-slate-300 text-sm font-semibold text-slate-700 dark:border-slate-700 dark:text-slate-200"
+          className="min-h-11 flex-1 rounded-lg border border-line-strong text-sm font-semibold text-sub"
         >
           Importar backup
         </button>
@@ -382,9 +383,9 @@ function BackupSection() {
       <input ref={fileInputRef} type="file" accept="application/json" onChange={onImportFile} className="hidden" />
 
       {pendingImport && (
-        <div className="mt-1 flex flex-col gap-2 rounded-xl border border-slate-300 p-3 dark:border-slate-700">
-          <p className="text-sm font-medium text-slate-800 dark:text-slate-100">Conferir antes de importar</p>
-          <ul className="text-xs text-slate-600 dark:text-slate-400">
+        <div className="mt-1 flex flex-col gap-2 rounded-xl border border-line-strong p-3">
+          <p className="text-sm font-medium text-ink">Conferir antes de importar</p>
+          <ul className="text-xs text-sub">
             <li>
               Formato {pendingImport.summary.version}
               {exportedAtLabel(pendingImport.summary.exportedAt) && `, exportado em ${exportedAtLabel(pendingImport.summary.exportedAt)}`}
@@ -394,34 +395,29 @@ function BackupSection() {
               {pendingImport.summary.contributions} aportes, {pendingImport.summary.categories} categorias
             </li>
             {totalSkipped(pendingImport.summary) > 0 && (
-              <li className="font-medium text-amber-700 dark:text-amber-400">
+              <li className="font-medium text-alerta">
                 {totalSkipped(pendingImport.summary)} registro(s) inválido(s) serão ignorados
               </li>
             )}
           </ul>
-          <button
-            onClick={() => runImport('merge')}
-            className="min-h-11 rounded-lg bg-violet-600 text-sm font-semibold text-white"
-          >
-            Mesclar com os dados atuais
-          </button>
+          <Button onClick={() => runImport('merge')}>Mesclar com os dados atuais</Button>
           <button
             onClick={() => runImport('replace')}
-            className="min-h-11 rounded-lg border border-red-300 text-sm font-semibold text-red-600 dark:border-red-900 dark:text-red-400"
+            className="min-h-11 rounded-lg border border-erro-soft-line text-sm font-semibold text-erro"
           >
             Substituir tudo o que está no app
           </button>
           <button
             onClick={() => setPendingImport(null)}
-            className="min-h-11 text-sm font-medium text-slate-600 dark:text-slate-400"
+            className="min-h-11 text-sm font-medium text-sub"
           >
             Cancelar
           </button>
         </div>
       )}
 
-      {error && <p className="text-xs font-medium text-red-600 dark:text-red-400">{error}</p>}
-      {status && <p className="text-xs text-slate-600 dark:text-slate-400">{status}</p>}
+      {error && <p className="text-xs font-medium text-erro">{error}</p>}
+      {status && <p className="text-xs text-sub">{status}</p>}
     </div>
   )
 }
@@ -445,9 +441,9 @@ function CategoriesSection() {
   }
 
   return (
-    <div className="flex flex-col gap-2 border-b border-slate-200 pb-5 dark:border-slate-800">
-      <p className="text-sm font-medium text-slate-700 dark:text-slate-300">Categorias</p>
-      <p className="text-xs text-slate-600 dark:text-slate-400">
+    <div className="flex flex-col gap-2 border-b border-line pb-5">
+      <p className="text-sm font-medium text-sub">Categorias</p>
+      <p className="text-xs text-sub">
         Toque no nome para renomear. Categorias ocultas somem do cadastro e dos filtros; os itens delas continuam.
       </p>
       <ul className="flex flex-col gap-2">
@@ -456,21 +452,21 @@ function CategoriesSection() {
           return (
             <li
               key={category.id}
-              className={`flex items-center gap-2 rounded-lg border border-slate-200 px-3 py-1.5 dark:border-slate-800 ${category.hidden ? 'opacity-60' : ''}`}
+              className={`flex items-center gap-2 rounded-lg border border-line px-3 py-1.5 ${category.hidden ? 'opacity-60' : ''}`}
             >
-              <CategoryIcon name={category.icon} className="h-4 w-4 shrink-0 text-violet-500" />
+              <CategoryIcon name={category.icon} className="h-4 w-4 shrink-0 text-accent" />
               <input
                 defaultValue={category.name}
                 key={category.name}
                 aria-label={`Nome da categoria ${category.name}`}
                 onBlur={(e) => rename(category, e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && e.currentTarget.blur()}
-                className="min-h-11 min-w-0 flex-1 bg-transparent text-base text-slate-800 dark:text-slate-100"
+                className="min-h-11 min-w-0 flex-1 bg-transparent text-base text-ink"
               />
-              <span className="shrink-0 text-xs text-slate-500">{count}</span>
+              <span className="shrink-0 text-xs text-sub">{count}</span>
               <button
                 onClick={() => db.categories.update(category.id, { hidden: !category.hidden })}
-                className="min-h-11 shrink-0 rounded-md border border-slate-300 px-2 text-xs font-medium text-slate-700 dark:border-slate-700 dark:text-slate-300"
+                className="min-h-11 shrink-0 rounded-md border border-line-strong px-2 text-xs font-medium text-sub"
               >
                 {category.hidden ? 'Mostrar' : 'Ocultar'}
               </button>
@@ -484,11 +480,11 @@ function CategoriesSection() {
           onChange={(e) => setNewName(e.target.value)}
           placeholder="Nova categoria"
           aria-label="Nome da nova categoria"
-          className="min-h-11 min-w-0 flex-1 rounded-lg border border-slate-300 px-3 text-base dark:border-slate-700 dark:bg-slate-900 dark:text-slate-50"
+          className="min-h-11 min-w-0 flex-1 rounded-lg border border-line-strong bg-surface px-3 text-base text-ink"
         />
-        <button type="submit" className="min-h-11 rounded-lg bg-violet-600 px-4 text-sm font-semibold text-white">
+        <Button type="submit" className="px-4">
           Adicionar
-        </button>
+        </Button>
       </form>
     </div>
   )

@@ -5,6 +5,7 @@ import { db, ITEM_TYPES, type ItemType } from '../db/db'
 import { todayISO } from '../domain/format'
 import { filterItemTypes, matchItemType } from '../domain/itemTypeMatch'
 import { CategoryIcon } from '../components/IconBadge'
+import { Button } from '../components/Button'
 
 export function ItemForm() {
   const navigate = useNavigate()
@@ -100,18 +101,18 @@ export function ItemForm() {
 
   return (
     <form onSubmit={onSubmit} className="flex flex-col gap-5 px-4 pt-6">
-      <h1 className="text-xl font-bold text-slate-900 dark:text-slate-50">
+      <h1 className="text-xl font-bold text-ink">
         {editing ? 'Editar item' : 'Novo item'}
       </h1>
 
       <div className="relative">
-        <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">
+        <label className="block text-sm font-medium text-sub">
           Nome do item
           <div className="relative mt-1">
             {icon && (
               <CategoryIcon
                 name={icon}
-                className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-violet-500"
+                className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-accent"
               />
             )}
             <input
@@ -122,26 +123,26 @@ export function ItemForm() {
               placeholder="Ex.: Fone de ouvido Bluetooth"
               autoComplete="off"
               required
-              className={`w-full rounded-lg border border-slate-300 py-2 pr-3 text-base font-normal text-slate-900 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-50 ${icon ? 'pl-9' : 'pl-3'}`}
+              className={`w-full rounded-lg border border-line-strong bg-surface py-2 pr-3 text-base font-normal text-ink ${icon ? 'pl-9' : 'pl-3'}`}
             />
           </div>
         </label>
         {matched && (
-          <p className="mt-1 text-xs text-slate-500">
-            Reconhecido como <span className="font-medium text-violet-600 dark:text-violet-400">{matched.name}</span>:
+          <p className="mt-1 text-xs text-sub">
+            Reconhecido como <span className="font-medium text-accent">{matched.name}</span>:
             ícone, vida útil e categoria preenchidos.
           </p>
         )}
         {suggestionsVisible && (
-          <ul className="absolute z-10 mt-1 max-h-56 w-full overflow-y-auto rounded-lg border border-slate-200 bg-white shadow-lg dark:border-slate-700 dark:bg-slate-900">
+          <ul className="absolute z-10 mt-1 max-h-56 w-full overflow-y-auto rounded-lg border border-line bg-surface shadow-lg">
             {suggestions.map((type) => (
               <li key={type.name}>
                 <button
                   type="button"
                   onMouseDown={() => pickSuggestion(type)}
-                  className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-slate-700 hover:bg-violet-50 dark:text-slate-300 dark:hover:bg-violet-950"
+                  className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-sub hover:bg-accent-soft"
                 >
-                  <CategoryIcon name={type.icon} className="h-4 w-4 text-violet-500" />
+                  <CategoryIcon name={type.icon} className="h-4 w-4 text-accent" />
                   {type.name}
                 </button>
               </li>
@@ -150,13 +151,13 @@ export function ItemForm() {
         )}
       </div>
 
-      <label className="flex flex-col gap-1 text-sm font-medium text-slate-700 dark:text-slate-300">
+      <label className="flex flex-col gap-1 text-sm font-medium text-sub">
         Categoria
         <select
           value={categoryId}
           onChange={(e) => setCategoryId(e.target.value)}
           required
-          className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-base font-normal text-slate-900 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-50"
+          className="rounded-lg border border-line-strong bg-surface px-3 py-2 text-base font-normal text-ink"
         >
           {selectableCategories.map((cat) => (
             <option key={cat.id} value={cat.id}>
@@ -167,40 +168,40 @@ export function ItemForm() {
       </label>
 
       <div className="grid grid-cols-2 gap-3">
-        <label className="flex flex-col gap-1 text-sm font-medium text-slate-700 dark:text-slate-300">
+        <label className="flex flex-col gap-1 text-sm font-medium text-sub">
           Vida útil (meses)
           <input
             type="number"
             min={1}
             value={lifespanMonths}
             onChange={(e) => setLifespanMonths(Number(e.target.value))}
-            className="rounded-lg border border-slate-300 px-3 py-2 text-base font-normal text-slate-900 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-50"
+            className="rounded-lg border border-line-strong bg-surface px-3 py-2 text-base font-normal text-ink"
           />
         </label>
-        <label className="flex flex-col gap-1 text-sm font-medium text-slate-700 dark:text-slate-300">
+        <label className="flex flex-col gap-1 text-sm font-medium text-sub">
           Quantidade
           <input
             type="number"
             min={1}
             value={quantity}
             onChange={(e) => setQuantity(Number(e.target.value))}
-            className="rounded-lg border border-slate-300 px-3 py-2 text-base font-normal text-slate-900 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-50"
+            className="rounded-lg border border-line-strong bg-surface px-3 py-2 text-base font-normal text-ink"
           />
         </label>
       </div>
 
       {!editing && (
         <div className="grid grid-cols-2 gap-3">
-          <label className="flex flex-col gap-1 text-sm font-medium text-slate-700 dark:text-slate-300">
+          <label className="flex flex-col gap-1 text-sm font-medium text-sub">
             Última compra em
             <input
               type="date"
               value={estimatedLastPurchaseDate}
               onChange={(e) => setEstimatedLastPurchaseDate(e.target.value)}
-              className="rounded-lg border border-slate-300 px-3 py-2 text-base font-normal text-slate-900 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-50"
+              className="rounded-lg border border-line-strong bg-surface px-3 py-2 text-base font-normal text-ink"
             />
           </label>
-          <label className="flex flex-col gap-1 text-sm font-medium text-slate-700 dark:text-slate-300">
+          <label className="flex flex-col gap-1 text-sm font-medium text-sub">
             Preço pago (R$)
             <input
               type="number"
@@ -209,13 +210,13 @@ export function ItemForm() {
               value={estimatedLastPrice}
               onChange={(e) => setEstimatedLastPrice(e.target.value)}
               placeholder="opcional"
-              className="rounded-lg border border-slate-300 px-3 py-2 text-base font-normal text-slate-900 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-50"
+              className="rounded-lg border border-line-strong bg-surface px-3 py-2 text-base font-normal text-ink"
             />
           </label>
         </div>
       )}
 
-      <label className="flex flex-col gap-1 text-sm font-medium text-slate-700 dark:text-slate-300">
+      <label className="flex flex-col gap-1 text-sm font-medium text-sub">
         Preço-alvo manual (R$) — opcional
         <input
           type="number"
@@ -224,16 +225,13 @@ export function ItemForm() {
           value={manualTargetPrice}
           onChange={(e) => setManualTargetPrice(e.target.value)}
           placeholder="deixe em branco para o app estimar"
-          className="rounded-lg border border-slate-300 px-3 py-2 text-base font-normal text-slate-900 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-50"
+          className="rounded-lg border border-line-strong bg-surface px-3 py-2 text-base font-normal text-ink"
         />
       </label>
 
-      <button
-        type="submit"
-        className="mt-2 rounded-lg bg-violet-600 py-3 text-center font-semibold text-white active:bg-violet-700"
-      >
+      <Button type="submit" className="mt-2 py-3 text-center">
         {editing ? 'Salvar alterações' : 'Adicionar item'}
-      </button>
+      </Button>
     </form>
   )
 }

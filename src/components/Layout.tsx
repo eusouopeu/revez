@@ -16,12 +16,12 @@ const tabs = [
 
 export function Layout() {
   return (
-    <div className="mx-auto flex min-h-svh max-w-md flex-col bg-slate-50 dark:bg-slate-950">
+    <div className="mx-auto flex min-h-svh max-w-md flex-col bg-paper">
       <main className="flex-1 overflow-y-auto pb-20" style={{ paddingTop: 'env(safe-area-inset-top)' }}>
         <Outlet />
       </main>
       <nav
-        className="fixed bottom-0 left-1/2 flex w-full max-w-md -translate-x-1/2 border-t border-slate-200 bg-white/95 backdrop-blur dark:border-slate-800 dark:bg-slate-900/95"
+        className="fixed bottom-0 left-1/2 flex w-full max-w-md -translate-x-1/2 border-t border-line bg-surface/95 backdrop-blur"
         style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
       >
         {tabs.map(({ to, label, Icon, Active, end }) => (
@@ -34,13 +34,11 @@ export function Layout() {
             {({ isActive }) => (
               <>
                 {isActive ? (
-                  <Active className="h-6 w-6 text-violet-600 dark:text-violet-400" />
+                  <Active className="h-6 w-6 text-accent" />
                 ) : (
-                  <Icon className="h-6 w-6 text-slate-400" />
+                  <Icon className="h-6 w-6 text-faint" />
                 )}
-                <span
-                  className={`text-[11px] font-medium ${isActive ? 'text-violet-600 dark:text-violet-400' : 'text-slate-500'}`}
-                >
+                <span className={`text-[11px] font-medium ${isActive ? 'text-accent' : 'text-sub'}`}>
                   {label}
                 </span>
               </>

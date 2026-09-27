@@ -14,6 +14,7 @@ if (Capacitor.isNativePlatform()) {
     const dark = darkQuery.matches
     StatusBar.setOverlaysWebView({ overlay: false })
     StatusBar.setStyle({ style: dark ? Style.Dark : Style.Light })
+    // Native API needs a literal hex — keep this in sync with --color-paper in index.css.
     StatusBar.setBackgroundColor({ color: dark ? '#020617' : '#f8fafc' })
   }
   applyStatusBar()

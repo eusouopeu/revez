@@ -1,5 +1,18 @@
 # Instruções para o Claude neste projeto
 
+## Padrões compartilhados
+
+Este projeto segue os padrões comuns aos apps do Pedro, documentados em
+`../_shared/tech-standards.md` (stack, testes, commit/push/release completo —
+versionamento, validação do pacote —, skill `/caveman` obrigatória,
+subagentes — até 5 chamadas por rodada —, leitura de dependências) e
+`../_shared/design-standards.md` + `../_shared/minimalismo.md` (TypeScript,
+Tailwind, ícones Heroicons, estética minimalista, "ajuda recolhida"). Este
+projeto não tinha essas regras documentadas localmente antes — a partir de
+agora seguem os padrões compartilhados também. "Ajuda recolhida": ainda não
+há candidato mapeado neste projeto; aplicar quando uma tela for tocada e
+tiver texto explicativo permanente que possa confundir o usuário.
+
 ## Toda mudança de código deve terminar em commit + push + APK
 
 Sempre que você alterar qualquer arquivo de código deste app (`src/`,
