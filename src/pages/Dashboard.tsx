@@ -1,9 +1,10 @@
-import { useEffect, useState } from 'react'
-import { Link, useSearchParams } from 'react-router-dom'
+import { useEffect, useMemo, useState } from 'react'
+import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import { db } from '../db/db'
 import { useCategories, useContributions, useItems, usePurchases, useSettings } from '../hooks/useAppData'
 import {
   distributeDeposit,
+  incompleteItems,
   monthlyProvision,
   nextReplacementDate,
   provisionBreakdown,
@@ -15,6 +16,8 @@ import {
 } from '../domain/calculations'
 import { formatBRL, formatDate, todayISO } from '../domain/format'
 import { CategoryIcon } from '../components/IconBadge'
+import { useToday } from '../hooks/useToday'
+import type { Contribution, Item, Purchase } from '../domain/types'
 import {
   ExclamationTriangleIcon,
   ClockIcon,
@@ -22,7 +25,15 @@ import {
   ArchiveBoxArrowDownIcon,
   BanknotesIcon,
   MagnifyingGlassIcon,
+  ExclamationCircleIcon,
 } from '@heroicons/react/24/solid'
+
+/** Everything removed with an item, kept around so the delete can be undone. */
+interface DeletedItemSnapshot {
+  item: Item
+  purchases: Purchase[]
+  contributions: Contribution[]
+}
 
 const urgencyStyle: Record<ItemUrgency, string> = {
   overdue: 'border-red-300 bg-red-50 dark:border-red-900 dark:bg-red-950',
@@ -44,7 +55,9 @@ export function Dashboard() {
   const contributions = useContributions()
   const categories = useCategories()
   const settings = useSettings()
-  const today = new Date()
+  const today = useToday()
+  const navigate = useNavigate()
+  const location = useLocation()
   const [searchParams, setSearchParams] = useSearchParams()
   const [showArchived, setShowArchived] = useState(false)
   const [query, setQuery] = useState('')
@@ -53,12 +66,21 @@ export function Dashboard() {
   /** null = follow the live monthly total (data may still be loading when opened from a notification). */
   const [depositAmount, setDepositAmount] = useState<string | null>(null)
   const [depositStatus, setDepositStatus] = useState<string | null>(null)
+  const [deleted, setDeleted] = useState<DeletedItemSnapshot | null>(null)
 
-  const activeItems = (items ?? []).filter((i) => i.status === 'active')
-  const archivedItems = (items ?? []).filter((i) => i.status === 'archived')
-  const { recurring, urgent } = provisionBreakdown(activeItems, purchases ?? [], settings, today)
-  const total = recurring + urgent
-  const reserve = reserveSummary(activeItems, purchases ?? [], contributions ?? [], settings, today)
+  const { activeItems, archivedItems, recurring, urgent, total, reserve, incomplete } = useMemo(() => {
+    const active = (items ?? []).filter((i) => i.status === 'active')
+    const breakdown = provisionBreakdown(active, purchases ?? [], settings, today)
+    return {
+      activeItems: active,
+      archivedItems: (items ?? []).filter((i) => i.status === 'archived'),
+      recurring: breakdown.recurring,
+      urgent: breakdown.urgent,
+      total: breakdown.recurring + breakdown.urgent,
+      reserve: reserveSummary(active, purchases ?? [], contributions ?? [], settings, today),
+      incomplete: incompleteItems(active, purchases ?? []),
+    }
+  }, [items, purchases, contributions, settings, today])
 
   // The monthly digest notification links here with ?guardar=1.
   useEffect(() => {
@@ -69,6 +91,26 @@ export function Dashboard() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams])
+
+  // ItemDetail hands the deleted item over through navigation state.
+  useEffect(() => {
+    const snapshot = (location.state as { deleted?: DeletedItemSnapshot } | null)?.deleted
+    if (snapshot) {
+      setDeleted(snapshot)
+      navigate(location.pathname, { replace: true, state: null })
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location.state])
+
+  async function undoDelete() {
+    if (!deleted) return
+    await db.transaction('rw', db.items, db.purchases, db.contributions, async () => {
+      await db.items.put(deleted.item)
+      await db.purchases.bulkPut(deleted.purchases)
+      await db.contributions.bulkPut(deleted.contributions)
+    })
+    setDeleted(null)
+  }
 
   function openDeposit() {
     setDepositAmount(null)
@@ -95,19 +137,33 @@ export function Dashboard() {
     )
   }
 
-  const filterCategories = (categories ?? []).filter(
-    (c) => !c.hidden && activeItems.some((i) => i.categoryId === c.id),
+  const filterCategories = useMemo(
+    () => (categories ?? []).filter((c) => !c.hidden && activeItems.some((i) => i.categoryId === c.id)),
+    [categories, activeItems],
   )
-  const q = normalize(query.trim())
 
-  const sorted = activeItems
-    .filter((i) => !categoryFilter || i.categoryId === categoryFilter)
-    .filter((i) => !q || normalize(i.name).includes(q))
-    .sort((a, b) => {
-      const ua = urgencyOf(a, purchases ?? [], today, settings.reminderLeadDays)
-      const ub = urgencyOf(b, purchases ?? [], today, settings.reminderLeadDays)
-      return urgencyRank[ua] - urgencyRank[ub]
-    })
+  // Each card's numbers are computed once here, not again inside the list
+  // (and the urgency used for sorting is no longer recomputed per comparison).
+  const cards = useMemo(() => {
+    const q = normalize(query.trim())
+    return activeItems
+      .filter((i) => !categoryFilter || i.categoryId === categoryFilter)
+      .filter((i) => !q || normalize(i.name).includes(q))
+      .map((item) => {
+        const goal = targetCost(item, purchases ?? [], settings, today)
+        const saved = savedForItem(item, purchases ?? [], contributions ?? [])
+        return {
+          item,
+          urgency: urgencyOf(item, purchases ?? [], today, settings.reminderLeadDays),
+          target: nextReplacementDate(item, purchases ?? []),
+          provision: monthlyProvision(item, purchases ?? [], settings, today),
+          goal,
+          saved,
+          savedPct: goal && goal > 0 ? Math.min(100, (saved / goal) * 100) : 0,
+        }
+      })
+      .sort((a, b) => urgencyRank[a.urgency] - urgencyRank[b.urgency])
+  }, [activeItems, purchases, contributions, settings, today, query, categoryFilter])
 
   async function reactivate(id: string) {
     await db.items.update(id, { status: 'active' })
@@ -120,15 +176,67 @@ export function Dashboard() {
 
   return (
     <div className="px-4 pt-6">
-      <h1 className="text-sm font-semibold uppercase tracking-wide text-slate-500">Guardar por mês</h1>
+      {deleted && (
+        <div className="mb-4 flex items-center gap-3 rounded-xl border border-slate-300 bg-white p-3 dark:border-slate-700 dark:bg-slate-900">
+          <p className="min-w-0 flex-1 truncate text-sm text-slate-700 dark:text-slate-200">
+            “{deleted.item.name}” foi excluído.
+          </p>
+          <button
+            onClick={undoDelete}
+            className="min-h-11 shrink-0 rounded-lg border border-violet-300 px-3 text-sm font-semibold text-violet-700 dark:border-violet-800 dark:text-violet-300"
+          >
+            Desfazer
+          </button>
+          <button
+            onClick={() => setDeleted(null)}
+            aria-label="Dispensar aviso"
+            className="min-h-11 shrink-0 px-2 text-sm text-slate-500"
+          >
+            ✕
+          </button>
+        </div>
+      )}
+
+      <h1 className="text-sm font-semibold uppercase tracking-wide text-slate-600 dark:text-slate-400">
+        Guardar por mês
+      </h1>
       <p className="mt-1 text-4xl font-extrabold text-slate-900 dark:text-slate-50">{formatBRL(total)}</p>
-      <p className="mt-1 text-sm text-slate-500">
+      <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">
         Soma da provisão de {activeItems.length} {activeItems.length === 1 ? 'item ativo' : 'itens ativos'}
       </p>
       {urgent > 0 && (
         <p className="mt-1 text-xs text-slate-500">
           {formatBRL(recurring)} recorrente + <span className="font-semibold text-amber-600 dark:text-amber-400">{formatBRL(urgent)} de itens vencendo este mês</span>
         </p>
+      )}
+
+      {incomplete.length > 0 && (
+        <div className="mt-4 rounded-xl border border-amber-300 bg-amber-50 p-3 dark:border-amber-900 dark:bg-amber-950">
+          <p className="flex items-start gap-2 text-sm font-medium text-amber-900 dark:text-amber-200">
+            <ExclamationCircleIcon className="mt-0.5 h-4 w-4 shrink-0 text-amber-600 dark:text-amber-400" />
+            <span>
+              {incomplete.length === 1
+                ? '1 item está fora da conta'
+                : `${incomplete.length} itens estão fora da conta`}{' '}
+              — o total acima está menor do que a realidade.
+            </span>
+          </p>
+          <ul className="mt-2 flex flex-col gap-1">
+            {incomplete.map(({ item, missing }) => (
+              <li key={item.id}>
+                <Link
+                  to={`/itens/${item.id}/editar`}
+                  className="flex min-h-11 items-center justify-between gap-2 rounded-lg bg-white px-3 text-sm dark:bg-slate-900"
+                >
+                  <span className="min-w-0 flex-1 truncate text-slate-800 dark:text-slate-100">{item.name}</span>
+                  <span className="shrink-0 text-xs font-medium text-amber-800 dark:text-amber-300">
+                    {missing === 'date' ? 'falta a data da última compra' : 'falta o preço'}
+                  </span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </div>
       )}
 
       {reserve.goal > 0 && (
@@ -250,17 +358,11 @@ export function Dashboard() {
             Nenhum item cadastrado ainda. Toque em “Novo item” para começar.
           </div>
         )}
-        {activeItems.length > 0 && sorted.length === 0 && (
+        {activeItems.length > 0 && cards.length === 0 && (
           <p className="py-4 text-center text-sm text-slate-400">Nenhum item encontrado.</p>
         )}
-        {sorted.map((item) => {
+        {cards.map(({ item, urgency, target, provision, goal, saved, savedPct }) => {
           const category = categories?.find((c) => c.id === item.categoryId)
-          const urgency = urgencyOf(item, purchases ?? [], today, settings.reminderLeadDays)
-          const target = nextReplacementDate(item, purchases ?? [])
-          const provision = monthlyProvision(item, purchases ?? [], settings, today)
-          const goal = targetCost(item, purchases ?? [], settings, today)
-          const saved = savedForItem(item, purchases ?? [], contributions ?? [])
-          const savedPct = goal && goal > 0 ? Math.min(100, (saved / goal) * 100) : 0
           const canQuickBuy = urgency === 'overdue' || urgency === 'due-soon'
 
           return (
@@ -294,8 +396,8 @@ export function Dashboard() {
               {canQuickBuy && (
                 <Link
                   to={`/itens/${item.id}?comprar=1`}
-                  title="Registrar compra"
-                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-violet-300 text-violet-600 dark:border-violet-800 dark:text-violet-300"
+                  aria-label={`Registrar compra de ${item.name}`}
+                  className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border border-violet-300 text-violet-600 dark:border-violet-800 dark:text-violet-300"
                 >
                   <ShoppingCartIcon className="h-4 w-4" />
                 </Link>
@@ -309,7 +411,7 @@ export function Dashboard() {
         <div className="mt-6">
           <button
             onClick={() => setShowArchived((v) => !v)}
-            className="text-sm font-medium text-slate-500 underline decoration-dotted"
+            className="min-h-11 text-sm font-medium text-slate-600 underline decoration-dotted dark:text-slate-400"
           >
             {showArchived ? 'Ocultar' : 'Mostrar'} arquivados ({archivedItems.length})
           </button>
@@ -330,8 +432,8 @@ export function Dashboard() {
                     </Link>
                     <button
                       onClick={() => reactivate(item.id)}
-                      title="Reativar"
-                      className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-slate-300 text-slate-500 dark:border-slate-700"
+                      aria-label={`Reativar ${item.name}`}
+                      className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border border-slate-300 text-slate-500 dark:border-slate-700"
                     >
                       <ArchiveBoxArrowDownIcon className="h-4 w-4" />
                     </button>

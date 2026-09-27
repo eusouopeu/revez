@@ -35,6 +35,64 @@ function isSupported(): boolean {
   return Capacitor.isNativePlatform()
 }
 
+/** Local notifications only exist in the native build; the browser shows nothing. */
+export function notificationsSupported(): boolean {
+  return isSupported()
+}
+
+export type NotificationPermission = 'unsupported' | 'granted' | 'denied' | 'prompt'
+
+export async function notificationPermission(): Promise<NotificationPermission> {
+  if (!isSupported()) return 'unsupported'
+  const { display } = await LocalNotifications.checkPermissions()
+  if (display === 'granted') return 'granted'
+  if (display === 'denied') return 'denied'
+  return 'prompt'
+}
+
+export async function requestNotificationPermission(): Promise<NotificationPermission> {
+  if (!isSupported()) return 'unsupported'
+  const { display } = await LocalNotifications.requestPermissions()
+  return display === 'granted' ? 'granted' : display === 'denied' ? 'denied' : 'prompt'
+}
+
+export interface PendingNotification {
+  id: number
+  title: string
+  at?: Date
+}
+
+/** Everything this app currently has scheduled, soonest first. */
+export async function pendingNotifications(): Promise<PendingNotification[]> {
+  if (!isSupported()) return []
+  const { notifications } = await LocalNotifications.getPending()
+  return notifications
+    .map((n) => ({
+      id: n.id,
+      title: n.title ?? n.body ?? 'Aviso',
+      at: n.schedule?.at ? new Date(n.schedule.at) : undefined,
+    }))
+    .sort((a, b) => (a.at?.getTime() ?? Infinity) - (b.at?.getTime() ?? Infinity))
+}
+
+const TEST_NOTIFICATION_ID = 999_999_998
+
+/** Fires a notification a few seconds from now, so the user can confirm avisos chegam. */
+export async function sendTestNotification(): Promise<boolean> {
+  if ((await notificationPermission()) !== 'granted') return false
+  await LocalNotifications.schedule({
+    notifications: [
+      {
+        id: TEST_NOTIFICATION_ID,
+        title: 'Notificação de teste',
+        body: 'É assim que os avisos do Revez vão aparecer.',
+        schedule: { at: new Date(Date.now() + 5_000) },
+      },
+    ],
+  })
+  return true
+}
+
 /** Next occurrence of `dayOfMonth` at 09:00, today included if it hasn't passed yet. */
 function nextMonthlyOccurrence(dayOfMonth: number, today: Date): Date {
   const candidate = new Date(today.getFullYear(), today.getMonth(), dayOfMonth, 9, 0, 0)
@@ -65,8 +123,9 @@ export async function syncNotifications(
   // Cancel everything still pending, not just active items' ids: an item
   // archived or deleted since the last sync would otherwise keep firing.
   const pending = await LocalNotifications.getPending()
-  if (pending.notifications.length > 0) {
-    await LocalNotifications.cancel({ notifications: pending.notifications.map((n) => ({ id: n.id })) })
+  const stale = pending.notifications.filter((n) => n.id !== TEST_NOTIFICATION_ID)
+  if (stale.length > 0) {
+    await LocalNotifications.cancel({ notifications: stale.map((n) => ({ id: n.id })) })
   }
 
   const activeItems = items.filter((i) => i.status === 'active')

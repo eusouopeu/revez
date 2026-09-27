@@ -59,4 +59,6 @@ export interface AppSettings {
   monthlyDigestDayOfMonth: number // 1-28
   reminderLeadDays: number
   provisioningMethod: 'per-item' | 'perpetual-average'
+  /** ISO timestamp of the last exported backup, for the "export again" reminder. */
+  lastBackupAt?: string
 }

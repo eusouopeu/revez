@@ -396,6 +396,56 @@ export function historicalSpendByMonth(purchases: Purchase[], today: Date, month
   return buckets
 }
 
+export type MissingData = 'date' | 'price'
+
+/**
+ * Why an active item can't be provisioned for: without a purchase date
+ * there is no cycle, and without a price there is nothing to divide. Such
+ * items silently count as zero in the monthly total, so the dashboard
+ * surfaces them instead of letting the total read low.
+ */
+export function missingDataFor(item: Item, purchases: Purchase[]): MissingData | undefined {
+  if (!lastCycleStart(item, purchases)) return 'date'
+  if (item.manualTargetPrice == null && lastPaidPrice(item, purchases) == null) return 'price'
+  return undefined
+}
+
+export interface IncompleteItem {
+  item: Item
+  missing: MissingData
+}
+
+export function incompleteItems(items: Item[], purchases: Purchase[]): IncompleteItem[] {
+  return items
+    .filter((i) => i.status === 'active')
+    .map((item) => ({ item, missing: missingDataFor(item, purchases) }))
+    .filter((entry): entry is IncompleteItem => entry.missing != null)
+}
+
+export interface CycleSettlement {
+  saved: number
+  paid: number
+  /** Positive: money set aside beyond what the purchase cost. */
+  leftover: number
+  /** Positive: how much the purchase exceeded what had been set aside. */
+  shortfall: number
+}
+
+/**
+ * Compares what was set aside during the cycle with what the replacement
+ * actually cost. Called with the contributions of the cycle the purchase
+ * closes, before the new purchase is registered.
+ */
+export function settleCycle(saved: number, paid: number): CycleSettlement {
+  const diff = Math.round((saved - paid) * 100) / 100
+  return {
+    saved: Math.round(saved * 100) / 100,
+    paid: Math.round(paid * 100) / 100,
+    leftover: Math.max(0, diff),
+    shortfall: Math.max(0, -diff),
+  }
+}
+
 export type ItemUrgency = 'overdue' | 'due-soon' | 'ok' | 'unscheduled'
 
 export function urgencyOf(item: Item, purchases: Purchase[], today: Date, reminderLeadDays: number): ItemUrgency {
