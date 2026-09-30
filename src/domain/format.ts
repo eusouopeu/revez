@@ -4,16 +4,18 @@ export function formatBRL(value: number): string {
   return value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
 }
 
+const pad2 = (n: number) => String(n).padStart(2, '0')
+
+/** DD/MM/AAAA, independent of the device locale. */
 export function formatDate(iso: string | Date): string {
   const d = typeof iso === 'string' ? parseISODate(iso) : iso
-  return d.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric' })
+  return `${pad2(d.getDate())}/${pad2(d.getMonth() + 1)}/${d.getFullYear()}`
 }
 
-/** "2026-03" -> "Mar. de 2026" */
+/** "2026-03" -> "03/2026" */
 export function formatMonthLabel(yearMonth: string): string {
   const [year, month] = yearMonth.split('-').map(Number)
-  const label = new Date(year, month - 1, 1).toLocaleDateString('pt-BR', { month: 'short', year: 'numeric' })
-  return label.charAt(0).toUpperCase() + label.slice(1)
+  return `${pad2(month)}/${year}`
 }
 
 export function todayISO(): string {

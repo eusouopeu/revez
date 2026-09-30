@@ -1,4 +1,4 @@
-import { forwardRef, useState } from 'react'
+import { forwardRef, useEffect, useId, useRef, useState } from 'react'
 import type { ButtonHTMLAttributes, ReactNode } from 'react'
 import { InformationCircleIcon } from '@heroicons/react/24/outline'
 
@@ -36,26 +36,70 @@ export const IconButton = forwardRef<HTMLButtonElement, ButtonHTMLAttributes<HTM
   },
 )
 
-/** Section title plus an optional collapsed explanation behind an (i) icon. */
-export function SectionTitle({ children, help, action }: { children: ReactNode; help?: ReactNode; action?: ReactNode }) {
+/** (i) icon that shows an explanation in a floating popover (tap, hover or focus). */
+export function HelpPopover({ children }: { children: ReactNode }) {
   const [open, setOpen] = useState(false)
+  const ref = useRef<HTMLDivElement>(null)
+  const id = useId()
+
+  useEffect(() => {
+    if (!open) return
+    function onPointerDown(e: PointerEvent) {
+      if (!ref.current?.contains(e.target as Node)) setOpen(false)
+    }
+    function onKeyDown(e: KeyboardEvent) {
+      if (e.key === 'Escape') setOpen(false)
+    }
+    function close() {
+      setOpen(false)
+    }
+    document.addEventListener('pointerdown', onPointerDown)
+    document.addEventListener('keydown', onKeyDown)
+    window.addEventListener('scroll', close, { passive: true })
+    return () => {
+      document.removeEventListener('pointerdown', onPointerDown)
+      document.removeEventListener('keydown', onKeyDown)
+      window.removeEventListener('scroll', close)
+    }
+  }, [open])
+
   return (
-    <div className="mb-2">
-      <div className="flex min-h-10 items-center gap-1">
-        <h2 className="rotulo flex-1">{children}</h2>
-        {help && (
-          <IconButton
-            label={open ? 'Ocultar explicação' : 'Ver explicação'}
-            aria-expanded={open}
-            onClick={() => setOpen((v) => !v)}
-            className={`h-8 w-8 ${open ? 'text-accent' : 'text-faint'}`}
-          >
-            <InformationCircleIcon className="h-[18px] w-[18px]" />
-          </IconButton>
-        )}
-        {action}
-      </div>
-      {help && open && <p className="mb-1 text-[12.5px] leading-relaxed text-sub">{help}</p>}
+    <div
+      ref={ref}
+      className="relative"
+      // Hover only for real mice: on touch the tap itself toggles it.
+      onPointerEnter={(e) => e.pointerType === 'mouse' && setOpen(true)}
+      onPointerLeave={(e) => e.pointerType === 'mouse' && setOpen(false)}
+    >
+      <IconButton
+        label="Ver explicação"
+        aria-expanded={open}
+        aria-describedby={open ? id : undefined}
+        onClick={() => setOpen((v) => !v)}
+        className={`h-8 w-8 ${open ? 'text-accent' : 'text-faint'}`}
+      >
+        <InformationCircleIcon className="h-[18px] w-[18px]" />
+      </IconButton>
+      {open && (
+        <div
+          id={id}
+          role="tooltip"
+          className="popover-in absolute right-0 top-full z-50 mt-1 w-64 max-w-[calc(100vw-32px)] rounded-lg bg-ink px-3 py-2.5 text-[12.5px] font-normal normal-case leading-relaxed tracking-normal text-paper shadow-lg"
+        >
+          {children}
+        </div>
+      )}
+    </div>
+  )
+}
+
+/** Section title plus an optional explanation behind an (i) popover. */
+export function SectionTitle({ children, help, action }: { children: ReactNode; help?: ReactNode; action?: ReactNode }) {
+  return (
+    <div className="mb-2 flex min-h-10 items-center gap-1">
+      <h2 className="rotulo flex-1">{children}</h2>
+      {help && <HelpPopover>{help}</HelpPopover>}
+      {action}
     </div>
   )
 }
