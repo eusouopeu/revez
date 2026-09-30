@@ -20,7 +20,21 @@ import { useToday } from '../hooks/useToday'
 import { CategoryIcon } from '../components/IconBadge'
 import { ConfirmDialog } from '../components/ConfirmDialog'
 import { Button } from '../components/Button'
-import { ArrowLeftIcon, PencilIcon, TrashIcon, ArchiveBoxIcon } from '@heroicons/react/24/outline'
+import { Screen } from '../components/Screen'
+import { Card, Empty, Field, IconButton, SectionTitle, inputClass } from '../components/ui'
+import {
+  ArchiveBoxArrowDownIcon,
+  ArchiveBoxIcon,
+  ArrowPathIcon,
+  CalendarIcon,
+  ClockIcon,
+  PencilIcon,
+  PlusIcon,
+  ShoppingCartIcon,
+  TagIcon,
+  TrashIcon,
+  XMarkIcon,
+} from '@heroicons/react/24/outline'
 
 interface PendingConfirm {
   title: string
@@ -168,7 +182,7 @@ export function ItemDetail() {
   function removePurchase(purchaseId: string) {
     setConfirming({
       title: 'Excluir esta compra?',
-      message: 'Ela sai do histórico e a data da próxima troca é recalculada.',
+      message: 'A data da próxima troca é recalculada.',
       confirmLabel: 'Excluir',
       onConfirm: () => db.purchases.delete(purchaseId),
     })
@@ -205,7 +219,7 @@ export function ItemDetail() {
     if (!item) return
     setConfirming({
       title: `Excluir "${item.name}"?`,
-      message: 'O histórico de compras e os aportes vão junto. Dá para desfazer logo depois.',
+      message: 'Compras e aportes vão junto. Dá para desfazer logo depois.',
       confirmLabel: 'Excluir',
       onConfirm: async () => {
         // Snapshot first: the dashboard offers to put it all back.
@@ -218,309 +232,254 @@ export function ItemDetail() {
     })
   }
 
-  const iconButton = 'flex min-h-11 min-w-11 items-center justify-center rounded-lg border border-line-strong px-3'
+  const archived = item.status === 'archived'
 
   return (
-    <div className="px-4 pt-6">
-      <button onClick={() => navigate(-1)} className="mb-4 flex min-h-11 items-center gap-1 text-sm text-sub">
-        <ArrowLeftIcon className="h-4 w-4" /> Voltar
-      </button>
-
-      <div className="flex items-center gap-3">
-        <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-accent-soft">
-          <CategoryIcon name={item.icon ?? category?.icon ?? 'CubeIcon'} className="h-6 w-6 text-accent" />
+    <Screen title={item.name} back>
+      <Card>
+        <div className="flex items-center gap-3">
+          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-accent-soft">
+            <CategoryIcon name={item.icon ?? category?.icon ?? 'CubeIcon'} className="h-5 w-5 text-accent" />
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="rotulo">Guardar por mês</p>
+            <p className="text-[26px] font-extrabold leading-tight tracking-[-0.5px] text-ink">
+              {provision != null ? formatBRL(provision) : '—'}
+            </p>
+          </div>
+          {archived && (
+            <span className="shrink-0 rounded-full bg-alerta-soft px-2 py-0.5 text-[11.5px] font-semibold text-alerta">
+              Arquivado
+            </span>
+          )}
         </div>
-        <div>
-          <h1 className="text-xl font-bold text-ink">{item.name}</h1>
-          <p className="text-sm text-sub">
-            {category?.name}
-            {item.quantity > 1 && ` · ${item.quantity} unidades`}
-          </p>
-        </div>
-      </div>
 
-      <div className="mt-5 grid grid-cols-2 gap-3">
-        <div className="rounded-xl border border-line p-3">
-          <p className="text-xs text-sub">Próxima troca</p>
-          <p className="font-semibold text-ink">
+        <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-[13px] text-sub">
+          <span className="flex items-center gap-1" title="Próxima troca">
+            <CalendarIcon className="h-4 w-4 text-faint" />
             {target ? formatDate(target) : 'sem data'}
-          </p>
-        </div>
-        <div className="rounded-xl border border-line p-3">
-          <p className="text-xs text-sub">Preço projetado</p>
-          <p className="font-semibold text-ink">
+          </span>
+          <span className="flex items-center gap-1" title="Preço projetado">
+            <TagIcon className="h-4 w-4 text-faint" />
             {projected != null ? formatBRL(projected) : '—'}
-          </p>
+          </span>
+          {item.quantity > 1 && <span>{item.quantity} un.</span>}
         </div>
-        <div className="col-span-2 rounded-xl border border-accent-soft-line bg-accent-soft p-3">
-          <p className="text-xs text-accent-strong">Guardar por mês</p>
-          <p className="text-lg font-bold text-accent-strong">
-            {provision != null ? formatBRL(provision) : '—'}
-          </p>
-        </div>
-      </div>
+
+        {goal != null && goal > 0 && (
+          <div className="mt-3">
+            <div className="h-2 w-full overflow-hidden rounded-full bg-surface-2">
+              <div className="h-full rounded-full bg-ok transition-[width] duration-200" style={{ width: `${progressPct}%` }} />
+            </div>
+            <p className="mt-1 text-[12px] text-sub">
+              {formatBRL(saved)} de {formatBRL(goal)}
+            </p>
+          </div>
+        )}
+      </Card>
 
       {settlement && (
-        <div className="mt-3 rounded-xl border border-ok-soft-line bg-ok-soft p-3">
-          <p className="text-sm font-medium text-ok">Fechamento do ciclo</p>
-          <p className="mt-1 text-sm text-ok">
-            Você tinha {formatBRL(settlement.saved)} guardado e a compra custou {formatBRL(settlement.paid)}.
+        <div className="mt-3 rounded-xl bg-ok-soft p-4 text-ok">
+          <div className="flex items-start gap-2">
+            <p className="flex-1 text-[15px] font-bold">
+              {settlement.leftover > 0
+                ? `Sobrou ${formatBRL(settlement.leftover)}`
+                : settlement.shortfall > 0
+                  ? `Faltaram ${formatBRL(settlement.shortfall)}`
+                  : 'Reserva cobriu a compra'}
+            </p>
+            {settlement.leftover <= 0 && (
+              <IconButton label="Dispensar" onClick={() => setSettlement(null)} className="-mr-2 -mt-2 text-ok">
+                <XMarkIcon className="h-5 w-5" />
+              </IconButton>
+            )}
+          </div>
+          <p className="text-[12.5px] opacity-80">
+            Guardado {formatBRL(settlement.saved)} · pago {formatBRL(settlement.paid)}
           </p>
-          {settlement.leftover > 0 ? (
-            <>
-              <p className="mt-1 text-sm font-semibold text-ok">
-                Sobra de {formatBRL(settlement.leftover)}.
-              </p>
-              <div className="mt-2 flex flex-col gap-2 sm:flex-row">
-                <button
-                  onClick={carryLeftover}
-                  className="min-h-11 flex-1 rounded-lg bg-ok px-3 text-sm font-semibold text-white"
-                >
-                  Levar para o próximo ciclo
-                </button>
-                <button
-                  onClick={() => setSettlement(null)}
-                  className="min-h-11 flex-1 rounded-lg border border-ok-soft-line px-3 text-sm font-semibold text-ok"
-                >
-                  Retirei o dinheiro
-                </button>
-              </div>
-            </>
-          ) : (
-            <>
-              <p className="mt-1 text-sm font-semibold text-ok">
-                {settlement.shortfall > 0
-                  ? `Faltaram ${formatBRL(settlement.shortfall)}, que saíram de outro lugar.`
-                  : 'A reserva cobriu exatamente a compra.'}
-              </p>
+          {settlement.leftover > 0 && (
+            <div className="mt-3 flex gap-2">
               <button
-                onClick={() => setSettlement(null)}
-                className="mt-2 min-h-11 w-full rounded-lg border border-ok-soft-line px-3 text-sm font-semibold text-ok"
+                onClick={carryLeftover}
+                className="min-h-11 flex-1 rounded-lg bg-ok px-3 text-[13.5px] font-semibold text-white"
               >
-                Entendi
+                Levar ao próximo ciclo
               </button>
-            </>
+              <button onClick={() => setSettlement(null)} className="min-h-11 px-3 text-[13.5px] font-semibold">
+                Retirei
+              </button>
+            </div>
           )}
         </div>
       )}
 
-      {item.status === 'active' && (urgency === 'overdue' || urgency === 'due-soon') && (
-        <div className="mt-3 rounded-xl border border-alerta-soft-line bg-alerta-soft p-3">
-          <p className="text-sm font-medium text-alerta">Ainda está bom?</p>
-          <p className="text-xs text-alerta">Adie a troca sem registrar compra.</p>
-          <div className="mt-2 flex gap-2">
-            {[1, 3, 6].map((m) => (
-              <button
-                key={m}
-                onClick={() => postpone(m)}
-                aria-label={`Adiar a troca em ${m} ${m === 1 ? 'mês' : 'meses'}`}
-                className="min-h-11 flex-1 rounded-lg border border-alerta-soft-line bg-surface text-sm font-semibold text-alerta"
-              >
-                +{m} {m === 1 ? 'mês' : 'meses'}
-              </button>
-            ))}
-          </div>
+      {!archived && (urgency === 'overdue' || urgency === 'due-soon') && (
+        <div className="mt-3 flex items-center gap-2 rounded-xl bg-alerta-soft p-2 pl-3.5 text-alerta">
+          <ClockIcon className="h-5 w-5 shrink-0" />
+          <span className="flex-1 text-[13.5px] font-semibold">Adiar troca</span>
+          {[1, 3, 6].map((m) => (
+            <button
+              key={m}
+              onClick={() => postpone(m)}
+              aria-label={`Adiar a troca em ${m} ${m === 1 ? 'mês' : 'meses'}`}
+              className="min-h-10 min-w-12 rounded-lg bg-surface px-2 text-[13px] font-semibold"
+            >
+              +{m}m
+            </button>
+          ))}
         </div>
       )}
 
       {postponedMonths > 0 && (
-        <p className="mt-2 text-xs text-sub">
-          Troca adiada em {postponedMonths} {postponedMonths === 1 ? 'mês' : 'meses'} neste ciclo.{' '}
-          <button onClick={undoPostpone} className="font-medium text-accent-strong underline">
+        <p className="mt-2 flex items-center gap-1 text-[12.5px] text-sub">
+          <ClockIcon className="h-4 w-4" /> Adiada +{postponedMonths} {postponedMonths === 1 ? 'mês' : 'meses'}
+          <button onClick={undoPostpone} className="ml-1 min-h-10 font-semibold text-accent">
             Desfazer
           </button>
         </p>
       )}
 
       {suggestLifespan && (
-        <div className="mt-3 rounded-xl border border-alerta-soft-line bg-alerta-soft p-3 text-sm">
-          <p className="text-alerta">
-            Pelo histórico, este item tem durado cerca de <strong>{observedRounded} meses</strong>, não{' '}
-            {item.lifespanMonths}.
-          </p>
+        <div className="mt-3 flex items-center gap-2 rounded-xl bg-alerta-soft p-2 pl-3.5 text-alerta">
+          <ArrowPathIcon className="h-5 w-5 shrink-0" />
+          <span className="flex-1 text-[13px]">
+            Tem durado <strong>~{observedRounded} meses</strong>, não {item.lifespanMonths}
+          </span>
           <button
             onClick={applyObservedLifespan}
-            className="mt-2 min-h-11 rounded-lg bg-alerta px-3 text-xs font-semibold text-white"
+            className="min-h-10 shrink-0 rounded-lg bg-surface px-3 text-[13px] font-semibold"
           >
-            Ajustar vida útil para {observedRounded} meses
+            Ajustar
           </button>
         </div>
       )}
 
-      {goal != null && goal > 0 && (
-        <div className="mt-3 rounded-xl border border-line p-3">
-          <div className="flex items-baseline justify-between">
-            <p className="text-xs text-sub">Guardado para a próxima troca</p>
-            <p className="text-xs font-medium text-sub">
-              {formatBRL(saved)} de {formatBRL(goal)}
-            </p>
-          </div>
-          <div className="mt-1.5 h-2 w-full overflow-hidden rounded-full bg-surface-2">
-            <div className="h-full rounded-full bg-ok" style={{ width: `${progressPct}%` }} />
-          </div>
-        </div>
-      )}
-
-      <div className="mt-6 flex gap-2">
-        <Button
-          onClick={() => (showPurchaseForm ? cancelPurchaseForm() : setShowPurchaseForm(true))}
-          className="flex-1"
-        >
-          Registrar compra
+      <div className="mt-4 flex items-center gap-1">
+        <Button onClick={() => (showPurchaseForm ? cancelPurchaseForm() : setShowPurchaseForm(true))} className="flex-1">
+          <ShoppingCartIcon className="h-5 w-5" /> Registrar compra
         </Button>
-        <Link to={`/itens/${item.id}/editar`} aria-label="Editar item" className={iconButton}>
-          <PencilIcon className="h-4 w-4 text-sub" />
+        <Link
+          to={`/itens/${item.id}/editar`}
+          aria-label="Editar item"
+          title="Editar item"
+          className="flex h-11 w-11 items-center justify-center rounded-lg text-sub"
+        >
+          <PencilIcon className="h-5 w-5" />
         </Link>
-        <button
-          onClick={archive}
-          aria-label={item.status === 'active' ? 'Arquivar item' : 'Reativar item'}
-          className={iconButton}
-        >
-          <ArchiveBoxIcon className="h-4 w-4 text-sub" />
-        </button>
-        <button
-          onClick={remove}
-          aria-label="Excluir item"
-          className="flex min-h-11 min-w-11 items-center justify-center rounded-lg border border-erro-soft-line px-3 text-erro"
-        >
-          <TrashIcon className="h-4 w-4" />
-        </button>
+        <IconButton label={archived ? 'Reativar item' : 'Arquivar item'} onClick={archive} className="h-11 w-11">
+          {archived ? <ArchiveBoxArrowDownIcon className="h-5 w-5" /> : <ArchiveBoxIcon className="h-5 w-5" />}
+        </IconButton>
+        <IconButton label="Excluir item" onClick={remove} className="h-11 w-11 text-erro">
+          <TrashIcon className="h-5 w-5" />
+        </IconButton>
       </div>
 
-      {item.status === 'archived' && (
-        <p className="mt-2 text-center text-xs font-medium text-alerta">
-          Item arquivado — fora do total mensal
-        </p>
-      )}
-
       {showPurchaseForm && (
-        <form onSubmit={submitPurchase} className="mt-4 flex flex-col gap-3 rounded-xl border border-line p-4">
-          <div className="grid grid-cols-2 gap-3">
-            <label className="flex flex-col gap-1 text-sm font-medium text-sub">
-              Data
-              <input
-                type="date"
-                value={date}
-                onChange={(e) => setDate(e.target.value)}
-                className="rounded-lg border border-line-strong bg-surface px-3 py-2 text-base font-normal text-ink"
-              />
-            </label>
-            <label className="flex flex-col gap-1 text-sm font-medium text-sub">
-              Preço unitário (R$)
-              <input
-                type="number"
-                min={0}
-                step="0.01"
-                required
-                value={price}
-                onChange={(e) => setPrice(e.target.value)}
-                className="rounded-lg border border-line-strong bg-surface px-3 py-2 text-base font-normal text-ink"
-              />
-            </label>
-          </div>
-          <div className="grid grid-cols-2 gap-3">
-            <label className="flex flex-col gap-1 text-sm font-medium text-sub">
-              Quantidade comprada
-              <input
-                type="number"
-                min={1}
-                value={purchaseQuantity}
-                onChange={(e) => setPurchaseQuantity(e.target.value)}
-                placeholder={item.quantity.toString()}
-                className="rounded-lg border border-line-strong bg-surface px-3 py-2 text-base font-normal text-ink"
-              />
-            </label>
-            <div className="flex flex-col justify-end pb-2">
-              <p className="text-xs text-sub">Total desta compra</p>
-              <p className="text-base font-semibold text-ink">
-                {formatBRL(Number(price || 0) * Math.max(1, Number(purchaseQuantity) || item.quantity))}
-              </p>
+        <Card className="mt-3">
+          <form onSubmit={submitPurchase} className="flex flex-col gap-3">
+            <div className="grid grid-cols-2 gap-3">
+              <Field label="Data">
+                <input type="date" value={date} onChange={(e) => setDate(e.target.value)} className={inputClass} />
+              </Field>
+              <Field label="Preço unit. (R$)">
+                <input
+                  type="number"
+                  min={0}
+                  step="0.01"
+                  required
+                  value={price}
+                  onChange={(e) => setPrice(e.target.value)}
+                  className={inputClass}
+                />
+              </Field>
+              <Field label="Quantidade">
+                <input
+                  type="number"
+                  min={1}
+                  value={purchaseQuantity}
+                  onChange={(e) => setPurchaseQuantity(e.target.value)}
+                  placeholder={item.quantity.toString()}
+                  className={inputClass}
+                />
+              </Field>
+              <div className="flex flex-col justify-end gap-1.5">
+                <span className="rotulo">Total</span>
+                <p className="py-2.5 text-[15px] font-semibold text-ink">
+                  {formatBRL(Number(price || 0) * Math.max(1, Number(purchaseQuantity) || item.quantity))}
+                </p>
+              </div>
             </div>
-          </div>
-          <label className="flex flex-col gap-1 text-sm font-medium text-sub">
-            Observação
             <input
               value={note}
               onChange={(e) => setNote(e.target.value)}
-              placeholder="opcional — marca, loja, modelo…"
-              className="rounded-lg border border-line-strong bg-surface px-3 py-2 text-base font-normal text-ink"
+              placeholder="Observação (marca, loja…)"
+              aria-label="Observação"
+              className={inputClass}
             />
-          </label>
-          <div className="flex gap-2">
-            <button type="submit" className="min-h-11 flex-1 rounded-lg bg-ink text-sm font-semibold text-paper">
-              {editingPurchaseId ? 'Salvar alterações' : 'Salvar compra'}
-            </button>
-            <Button type="button" variant="secondary" onClick={cancelPurchaseForm} className="px-4 font-medium">
-              Cancelar
-            </Button>
-          </div>
-        </form>
+            <div className="flex gap-2">
+              <Button type="submit" className="flex-1">
+                {editingPurchaseId ? 'Salvar alterações' : 'Salvar compra'}
+              </Button>
+              <Button type="button" variant="ghost" onClick={cancelPurchaseForm}>
+                Cancelar
+              </Button>
+            </div>
+          </form>
+        </Card>
       )}
 
-      <div className="mt-6">
-        <h2 className="mb-2 text-sm font-semibold text-sub">Histórico de compras</h2>
-        {purchases.length === 0 && <p className="text-sm text-sub">Nenhuma compra registrada ainda.</p>}
-        <ul className="flex flex-col gap-2">
+      <section className="mt-6">
+        <SectionTitle>Compras</SectionTitle>
+        {purchases.length === 0 && <Empty>Nenhuma compra registrada.</Empty>}
+        <ul className="flex flex-col gap-1.5">
           {[...purchases].reverse().map((p) => (
-            <li key={p.id} className="flex items-center justify-between gap-2 rounded-lg border border-line px-3 py-2 text-sm">
+            <li key={p.id} className="flex items-center gap-1 rounded-lg bg-surface py-1 pl-3.5 pr-1">
               <span className="min-w-0 flex-1">
-                <span className="block text-sub">{formatDate(p.date)}</span>
-                {p.note && <span className="block truncate text-xs text-sub">{p.note}</span>}
-              </span>
-              <span className="text-right">
-                <span className="block font-medium text-ink">
-                  {formatBRL(p.unitPrice * p.quantity)}
+                <span className="block text-[14px] font-medium text-ink">{formatBRL(p.unitPrice * p.quantity)}</span>
+                <span className="block truncate text-[12px] text-sub">
+                  {formatDate(p.date)}
+                  {p.quantity > 1 && ` · ${p.quantity} × ${formatBRL(p.unitPrice)}`}
+                  {p.note && ` · ${p.note}`}
                 </span>
-                {p.quantity > 1 && (
-                  <span className="block text-xs text-sub">
-                    {p.quantity} × {formatBRL(p.unitPrice)}
-                  </span>
-                )}
               </span>
-              <button
-                onClick={() => startEditPurchase(p)}
-                aria-label={`Editar compra de ${formatDate(p.date)}`}
-                className="flex min-h-11 min-w-11 items-center justify-center text-sub"
-              >
+              <IconButton label={`Editar compra de ${formatDate(p.date)}`} onClick={() => startEditPurchase(p)}>
                 <PencilIcon className="h-4 w-4" />
-              </button>
-              <button
-                onClick={() => removePurchase(p.id)}
-                aria-label={`Excluir compra de ${formatDate(p.date)}`}
-                className="flex min-h-11 min-w-11 items-center justify-center text-erro"
-              >
+              </IconButton>
+              <IconButton label={`Excluir compra de ${formatDate(p.date)}`} onClick={() => removePurchase(p.id)} className="text-erro">
                 <TrashIcon className="h-4 w-4" />
-              </button>
+              </IconButton>
             </li>
           ))}
         </ul>
-      </div>
+      </section>
 
-      <div className="mt-6">
-        <div className="mb-2 flex items-center justify-between">
-          <h2 className="text-sm font-semibold text-sub">Aportes guardados</h2>
-          <button
-            onClick={() => setShowContributionForm((v) => !v)}
-            className="min-h-11 text-xs font-medium text-accent-strong"
-          >
-            {showContributionForm ? 'Cancelar' : '+ Registrar aporte'}
-          </button>
-        </div>
+      <section className="mt-6">
+        <SectionTitle
+          action={
+            <IconButton
+              label={showContributionForm ? 'Cancelar aporte' : 'Registrar aporte'}
+              onClick={() => setShowContributionForm((v) => !v)}
+              className="text-accent"
+            >
+              {showContributionForm ? <XMarkIcon className="h-5 w-5" /> : <PlusIcon className="h-5 w-5" />}
+            </IconButton>
+          }
+        >
+          Aportes
+        </SectionTitle>
 
         {showContributionForm && (
-          <form onSubmit={submitContribution} className="mb-3 flex flex-col gap-3 rounded-xl border border-line p-4">
-            <div className="grid grid-cols-2 gap-3">
-              <label className="flex flex-col gap-1 text-sm font-medium text-sub">
-                Data
+          <Card className="mb-2">
+            <form onSubmit={submitContribution} className="flex items-end gap-2">
+              <Field label="Data" className="flex-1">
                 <input
                   type="date"
                   value={contributionDate}
                   onChange={(e) => setContributionDate(e.target.value)}
-                  className="rounded-lg border border-line-strong bg-surface px-3 py-2 text-base font-normal text-ink"
+                  className={inputClass}
                 />
-              </label>
-              <label className="flex flex-col gap-1 text-sm font-medium text-sub">
-                Valor (R$)
+              </Field>
+              <Field label="Valor (R$)" className="flex-1">
                 <input
                   type="number"
                   min={0}
@@ -528,35 +487,27 @@ export function ItemDetail() {
                   required
                   value={contributionAmount}
                   onChange={(e) => setContributionAmount(e.target.value)}
-                  className="rounded-lg border border-line-strong bg-surface px-3 py-2 text-base font-normal text-ink"
+                  className={inputClass}
                 />
-              </label>
-            </div>
-            <button type="submit" className="min-h-11 rounded-lg bg-ink text-sm font-semibold text-paper">
-              Salvar aporte
-            </button>
-          </form>
+              </Field>
+              <Button type="submit">Salvar</Button>
+            </form>
+          </Card>
         )}
 
-        {contributions.length === 0 && !showContributionForm && (
-          <p className="text-sm text-sub">Nenhum aporte registrado neste ciclo.</p>
-        )}
-        <ul className="flex flex-col gap-2">
+        {contributions.length === 0 && !showContributionForm && <Empty>Nenhum aporte neste ciclo.</Empty>}
+        <ul className="flex flex-col gap-1.5">
           {[...contributions].reverse().map((c) => (
-            <li key={c.id} className="flex items-center justify-between gap-2 rounded-lg border border-line px-3 py-2 text-sm">
-              <span className="text-sub">{formatDate(c.date)}</span>
-              <span className="flex-1 text-right font-medium text-ink">{formatBRL(c.amount)}</span>
-              <button
-                onClick={() => removeContribution(c.id)}
-                aria-label={`Excluir aporte de ${formatDate(c.date)}`}
-                className="flex min-h-11 min-w-11 items-center justify-center text-erro"
-              >
+            <li key={c.id} className="flex items-center gap-2 rounded-lg bg-surface py-1 pl-3.5 pr-1">
+              <span className="flex-1 text-[13px] text-sub">{formatDate(c.date)}</span>
+              <span className="text-[14px] font-medium text-ink">{formatBRL(c.amount)}</span>
+              <IconButton label={`Excluir aporte de ${formatDate(c.date)}`} onClick={() => removeContribution(c.id)} className="text-erro">
                 <TrashIcon className="h-4 w-4" />
-              </button>
+              </IconButton>
             </li>
           ))}
         </ul>
-      </div>
+      </section>
 
       <ConfirmDialog
         open={confirming != null}
@@ -571,6 +522,6 @@ export function ItemDetail() {
         }}
         onCancel={() => setConfirming(null)}
       />
-    </div>
+    </Screen>
   )
 }

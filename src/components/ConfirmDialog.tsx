@@ -54,8 +54,8 @@ export function ConfirmDialog({
         onClick={(e) => e.stopPropagation()}
         className="w-full max-w-sm rounded-2xl bg-surface p-5 shadow-xl"
       >
-        <h2 className="text-base font-semibold text-ink">{title}</h2>
-        {message && <p className="mt-1 text-sm text-sub">{message}</p>}
+        <h2 className="text-[17px] font-bold text-ink">{title}</h2>
+        {message && <p className="mt-1.5 text-[13.5px] leading-relaxed text-sub">{message}</p>}
         <div className="mt-5 flex gap-2">
           <Button variant="secondary" onClick={onCancel} className="flex-1">
             {cancelLabel}

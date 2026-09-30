@@ -1,25 +1,11 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
-import { Capacitor } from '@capacitor/core'
-import { StatusBar, Style } from '@capacitor/status-bar'
 import './index.css'
 import App from './App.tsx'
+import { aplicarTema, temaSalvo } from './lib/theme'
 
-if (Capacitor.isNativePlatform()) {
-  // Capacitor's Style.Light means dark icons (for light backgrounds) and
-  // Style.Dark means light icons — using Dark on a white bar hid everything
-  // except the battery percentage. Follow the system theme instead.
-  const darkQuery = window.matchMedia('(prefers-color-scheme: dark)')
-  const applyStatusBar = () => {
-    const dark = darkQuery.matches
-    StatusBar.setOverlaysWebView({ overlay: false })
-    StatusBar.setStyle({ style: dark ? Style.Dark : Style.Light })
-    // Native API needs a literal hex — keep this in sync with --color-paper in index.css.
-    StatusBar.setBackgroundColor({ color: dark ? '#020617' : '#f8fafc' })
-  }
-  applyStatusBar()
-  darkQuery.addEventListener('change', applyStatusBar)
-}
+// Before the first render, so a saved dark theme never flashes light.
+aplicarTema(temaSalvo())
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

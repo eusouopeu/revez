@@ -6,6 +6,9 @@ import { todayISO } from '../domain/format'
 import { filterItemTypes, matchItemType } from '../domain/itemTypeMatch'
 import { CategoryIcon } from '../components/IconBadge'
 import { Button } from '../components/Button'
+import { Screen } from '../components/Screen'
+import { Card, Field, inputClass } from '../components/ui'
+import { CheckCircleIcon, ChevronDownIcon } from '@heroicons/react/24/outline'
 
 export function ItemForm() {
   const navigate = useNavigate()
@@ -23,6 +26,7 @@ export function ItemForm() {
   const [estimatedLastPurchaseDate, setEstimatedLastPurchaseDate] = useState(todayISO())
   const [estimatedLastPrice, setEstimatedLastPrice] = useState('')
   const [manualTargetPrice, setManualTargetPrice] = useState('')
+  const [showAdvanced, setShowAdvanced] = useState(false)
   /** Catalog entry last applied to icon/lifespan/category, so typing more words doesn't re-apply it over manual edits. */
   const appliedType = useRef<string | undefined>(undefined)
 
@@ -36,6 +40,7 @@ export function ItemForm() {
       setEstimatedLastPurchaseDate(editing.estimatedLastPurchaseDate ?? todayISO())
       setEstimatedLastPrice(editing.estimatedLastPrice?.toString() ?? '')
       setManualTargetPrice(editing.manualTargetPrice?.toString() ?? '')
+      setShowAdvanced(editing.manualTargetPrice != null)
       appliedType.current = matchItemType(editing.name, ITEM_TYPES)?.name
     } else if (categories && categories.length > 0 && !categoryId) {
       setCategoryId(categories.find((c) => !c.hidden)?.id ?? categories[0].id)
@@ -100,138 +105,143 @@ export function ItemForm() {
   const suggestionsVisible = showSuggestions && suggestions.length > 0 && !matched
 
   return (
-    <form onSubmit={onSubmit} className="flex flex-col gap-5 px-4 pt-6">
-      <h1 className="text-xl font-bold text-ink">
-        {editing ? 'Editar item' : 'Novo item'}
-      </h1>
-
-      <div className="relative">
-        <label className="block text-sm font-medium text-sub">
-          Nome do item
-          <div className="relative mt-1">
-            {icon && (
-              <CategoryIcon
-                name={icon}
-                className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-accent"
-              />
+    <Screen title={editing ? 'Editar item' : 'Novo item'} back={!!editing}>
+      <form onSubmit={onSubmit} className="flex flex-col gap-4">
+        <Card className="flex flex-col gap-4">
+          <div className="relative">
+            <Field label="Nome">
+              <div className="relative">
+                {icon && (
+                  <CategoryIcon
+                    name={icon}
+                    className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-accent"
+                  />
+                )}
+                <input
+                  value={name}
+                  onChange={(e) => onNameChange(e.target.value)}
+                  onFocus={() => setShowSuggestions(true)}
+                  onBlur={() => setTimeout(() => setShowSuggestions(false), 150)}
+                  placeholder="Ex.: Fone de ouvido"
+                  autoComplete="off"
+                  required
+                  className={`${inputClass} ${icon ? 'pl-9' : ''}`}
+                />
+              </div>
+            </Field>
+            {matched && (
+              <p
+                className="mt-1.5 flex items-center gap-1 text-[12px] font-medium text-ok"
+                title="Ícone, vida útil e categoria preenchidos"
+              >
+                <CheckCircleIcon className="h-4 w-4" /> {matched.name}
+              </p>
             )}
-            <input
-              value={name}
-              onChange={(e) => onNameChange(e.target.value)}
-              onFocus={() => setShowSuggestions(true)}
-              onBlur={() => setTimeout(() => setShowSuggestions(false), 150)}
-              placeholder="Ex.: Fone de ouvido Bluetooth"
-              autoComplete="off"
-              required
-              className={`w-full rounded-lg border border-line-strong bg-surface py-2 pr-3 text-base font-normal text-ink ${icon ? 'pl-9' : 'pl-3'}`}
-            />
+            {suggestionsVisible && (
+              <ul className="absolute z-10 mt-1 max-h-56 w-full overflow-y-auto rounded-lg border border-line bg-surface shadow-lg">
+                {suggestions.map((type) => (
+                  <li key={type.name}>
+                    <button
+                      type="button"
+                      onMouseDown={() => pickSuggestion(type)}
+                      className="flex min-h-11 w-full items-center gap-2 px-3 text-left text-[14px] text-ink hover:bg-accent-soft"
+                    >
+                      <CategoryIcon name={type.icon} className="h-4 w-4 text-accent" />
+                      {type.name}
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
           </div>
-        </label>
-        {matched && (
-          <p className="mt-1 text-xs text-sub">
-            Reconhecido como <span className="font-medium text-accent">{matched.name}</span>:
-            ícone, vida útil e categoria preenchidos.
-          </p>
-        )}
-        {suggestionsVisible && (
-          <ul className="absolute z-10 mt-1 max-h-56 w-full overflow-y-auto rounded-lg border border-line bg-surface shadow-lg">
-            {suggestions.map((type) => (
-              <li key={type.name}>
-                <button
-                  type="button"
-                  onMouseDown={() => pickSuggestion(type)}
-                  className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-sub hover:bg-accent-soft"
-                >
-                  <CategoryIcon name={type.icon} className="h-4 w-4 text-accent" />
-                  {type.name}
-                </button>
-              </li>
-            ))}
-          </ul>
-        )}
-      </div>
 
-      <label className="flex flex-col gap-1 text-sm font-medium text-sub">
-        Categoria
-        <select
-          value={categoryId}
-          onChange={(e) => setCategoryId(e.target.value)}
-          required
-          className="rounded-lg border border-line-strong bg-surface px-3 py-2 text-base font-normal text-ink"
-        >
-          {selectableCategories.map((cat) => (
-            <option key={cat.id} value={cat.id}>
-              {cat.name}
-            </option>
-          ))}
-        </select>
-      </label>
+          <Field label="Categoria">
+            <select value={categoryId} onChange={(e) => setCategoryId(e.target.value)} required className={inputClass}>
+              {selectableCategories.map((cat) => (
+                <option key={cat.id} value={cat.id}>
+                  {cat.name}
+                </option>
+              ))}
+            </select>
+          </Field>
 
-      <div className="grid grid-cols-2 gap-3">
-        <label className="flex flex-col gap-1 text-sm font-medium text-sub">
-          Vida útil (meses)
-          <input
-            type="number"
-            min={1}
-            value={lifespanMonths}
-            onChange={(e) => setLifespanMonths(Number(e.target.value))}
-            className="rounded-lg border border-line-strong bg-surface px-3 py-2 text-base font-normal text-ink"
-          />
-        </label>
-        <label className="flex flex-col gap-1 text-sm font-medium text-sub">
-          Quantidade
-          <input
-            type="number"
-            min={1}
-            value={quantity}
-            onChange={(e) => setQuantity(Number(e.target.value))}
-            className="rounded-lg border border-line-strong bg-surface px-3 py-2 text-base font-normal text-ink"
-          />
-        </label>
-      </div>
+          <div className="grid grid-cols-2 gap-3">
+            <Field label="Vida útil (meses)">
+              <input
+                type="number"
+                min={1}
+                value={lifespanMonths}
+                onChange={(e) => setLifespanMonths(Number(e.target.value))}
+                className={inputClass}
+              />
+            </Field>
+            <Field label="Quantidade">
+              <input
+                type="number"
+                min={1}
+                value={quantity}
+                onChange={(e) => setQuantity(Number(e.target.value))}
+                className={inputClass}
+              />
+            </Field>
+          </div>
 
-      {!editing && (
-        <div className="grid grid-cols-2 gap-3">
-          <label className="flex flex-col gap-1 text-sm font-medium text-sub">
-            Última compra em
-            <input
-              type="date"
-              value={estimatedLastPurchaseDate}
-              onChange={(e) => setEstimatedLastPurchaseDate(e.target.value)}
-              className="rounded-lg border border-line-strong bg-surface px-3 py-2 text-base font-normal text-ink"
-            />
-          </label>
-          <label className="flex flex-col gap-1 text-sm font-medium text-sub">
-            Preço pago (R$)
-            <input
-              type="number"
-              min={0}
-              step="0.01"
-              value={estimatedLastPrice}
-              onChange={(e) => setEstimatedLastPrice(e.target.value)}
-              placeholder="opcional"
-              className="rounded-lg border border-line-strong bg-surface px-3 py-2 text-base font-normal text-ink"
-            />
-          </label>
+          {!editing && (
+            <div className="grid grid-cols-2 gap-3">
+              <Field label="Última compra">
+                <input
+                  type="date"
+                  value={estimatedLastPurchaseDate}
+                  onChange={(e) => setEstimatedLastPurchaseDate(e.target.value)}
+                  className={inputClass}
+                />
+              </Field>
+              <Field label="Preço pago (R$)">
+                <input
+                  type="number"
+                  min={0}
+                  step="0.01"
+                  value={estimatedLastPrice}
+                  onChange={(e) => setEstimatedLastPrice(e.target.value)}
+                  placeholder="opcional"
+                  className={inputClass}
+                />
+              </Field>
+            </div>
+          )}
+        </Card>
+
+        <div>
+          <button
+            type="button"
+            onClick={() => setShowAdvanced((v) => !v)}
+            aria-expanded={showAdvanced}
+            className="flex min-h-10 items-center gap-1 text-[13px] font-medium text-sub"
+          >
+            Mais opções
+            <ChevronDownIcon className={`h-4 w-4 transition-transform ${showAdvanced ? 'rotate-180' : ''}`} />
+          </button>
+          {showAdvanced && (
+            <Card className="mt-1">
+              <Field label="Preço-alvo manual (R$)">
+                <input
+                  type="number"
+                  min={0}
+                  step="0.01"
+                  value={manualTargetPrice}
+                  onChange={(e) => setManualTargetPrice(e.target.value)}
+                  placeholder="em branco = estimado pelo app"
+                  className={inputClass}
+                />
+              </Field>
+            </Card>
+          )}
         </div>
-      )}
 
-      <label className="flex flex-col gap-1 text-sm font-medium text-sub">
-        Preço-alvo manual (R$) — opcional
-        <input
-          type="number"
-          min={0}
-          step="0.01"
-          value={manualTargetPrice}
-          onChange={(e) => setManualTargetPrice(e.target.value)}
-          placeholder="deixe em branco para o app estimar"
-          className="rounded-lg border border-line-strong bg-surface px-3 py-2 text-base font-normal text-ink"
-        />
-      </label>
-
-      <Button type="submit" className="mt-2 py-3 text-center">
-        {editing ? 'Salvar alterações' : 'Adicionar item'}
-      </Button>
-    </form>
+        <Button type="submit" className="min-h-12 w-full">
+          {editing ? 'Salvar alterações' : 'Adicionar item'}
+        </Button>
+      </form>
+    </Screen>
   )
 }

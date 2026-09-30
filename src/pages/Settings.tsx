@@ -27,6 +27,21 @@ import { useToday } from '../hooks/useToday'
 import { CategoryIcon } from '../components/IconBadge'
 import { ConfirmDialog } from '../components/ConfirmDialog'
 import { Button } from '../components/Button'
+import { Screen } from '../components/Screen'
+import { Card, Field, IconButton, SectionTitle, inputClass } from '../components/ui'
+import {
+  ArrowDownTrayIcon,
+  ArrowUpTrayIcon,
+  BellAlertIcon,
+  BellIcon,
+  BellSlashIcon,
+  CheckCircleIcon,
+  ExclamationTriangleIcon,
+  EyeIcon,
+  EyeSlashIcon,
+  PlusIcon,
+  TrashIcon,
+} from '@heroicons/react/24/outline'
 import type { AppSettings, Category } from '../domain/types'
 
 function clamp(value: number, min: number, max: number): number {
@@ -41,6 +56,11 @@ function exportedAtLabel(exportedAt: string | undefined): string {
   const date = new Date(exportedAt)
   return Number.isFinite(date.getTime()) ? formatDate(date) : ''
 }
+
+const methods: { id: AppSettings['provisioningMethod']; label: string }[] = [
+  { id: 'per-item', label: 'Por item' },
+  { id: 'perpetual-average', label: 'Custo médio' },
+]
 
 export function Settings() {
   const settings = useSettings()
@@ -84,127 +104,115 @@ export function Settings() {
   }, [inflation, reminderLeadDays, digestDay, provisioningMethod])
 
   return (
-    <div className="flex flex-col gap-5 px-4 pt-6">
-      <h1 className="text-xl font-bold text-ink">Ajustes</h1>
+    <Screen title="Ajustes">
+      <div className="flex flex-col gap-6">
+        <CategoriesSection />
 
-      <CategoriesSection />
-
-      <label className="flex flex-col gap-1 text-sm font-medium text-sub">
-        Correção anual estimada (inflação, %)
-        <input
-          type="number"
-          step="0.1"
-          value={inflation}
-          onChange={(e) => setInflation(e.target.value)}
-          className="rounded-lg border border-line-strong bg-surface px-3 py-2 text-base font-normal text-ink"
-        />
-        <span className="text-xs text-sub">
-          Usada para projetar preços com menos de 4 compras registradas.
-        </span>
-      </label>
-
-      <label className="flex flex-col gap-1 text-sm font-medium text-sub">
-        Avisar com quantos dias de antecedência
-        <input
-          type="number"
-          min={1}
-          max={365}
-          value={reminderLeadDays}
-          onChange={(e) => setReminderLeadDays(Number(e.target.value))}
-          className="rounded-lg border border-line-strong bg-surface px-3 py-2 text-base font-normal text-ink"
-        />
-      </label>
-
-      <label className="flex flex-col gap-1 text-sm font-medium text-sub">
-        Dia do mês para o resumo de poupança
-        <input
-          type="number"
-          min={1}
-          max={28}
-          value={digestDay}
-          onChange={(e) => setDigestDay(Number(e.target.value))}
-          className="rounded-lg border border-line-strong bg-surface px-3 py-2 text-base font-normal text-ink"
-        />
-      </label>
-
-      <NotificationsSection />
-
-      <div className="flex flex-col gap-2">
-        <p className="text-sm font-medium text-sub">Método de provisão mensal</p>
-        <div className="flex flex-col gap-2">
-          <label className="flex items-start gap-2 rounded-lg border border-line p-3 text-sm">
-            <input
-              type="radio"
-              name="provisioningMethod"
-              checked={provisioningMethod === 'per-item'}
-              onChange={() => setProvisioningMethod('per-item')}
-              className="mt-0.5"
-            />
-            <span>
-              <span className="block font-medium text-ink">Por item (padrão)</span>
-              <span className="block text-xs text-sub">
-                Cada item financia exatamente o que falta no tempo que falta. Mais preciso, mas o total pode picar
-                quando um item vence.
-              </span>
-            </span>
-          </label>
-          <label className="flex items-start gap-2 rounded-lg border border-line p-3 text-sm">
-            <input
-              type="radio"
-              name="provisioningMethod"
-              checked={provisioningMethod === 'perpetual-average'}
-              onChange={() => setProvisioningMethod('perpetual-average')}
-              className="mt-0.5"
-            />
-            <span>
-              <span className="block font-medium text-ink">Custo médio perpétuo</span>
-              <span className="block text-xs text-sub">
-                Divide pelo ciclo de vida completo. Número estável mês a mês, mas subfinancia itens comprados perto
-                do fim da vida útil.
-              </span>
-            </span>
-          </label>
-        </div>
-      </div>
-
-      <BackupSection />
-
-      {demoPresent && (
-        <div className="flex flex-col gap-2 border-t border-line pt-5">
-          <p className="text-sm font-medium text-sub">Dados de exemplo</p>
-          <p className="text-xs text-sub">
-            O app veio com itens, compras e aportes fictícios para demonstração. Seus próprios registros não são
-            afetados.
-          </p>
-          <button
-            onClick={() => setConfirmDemo(true)}
-            className="min-h-11 rounded-lg border border-erro-soft-line text-sm font-semibold text-erro"
+        <section>
+          <SectionTitle
+            help={
+              <>
+                A inflação projeta o preço de itens com menos de 4 compras registradas. <strong>Por item</strong>{' '}
+                financia exatamente o que falta no tempo que falta — mais preciso, mas o total sobe quando um item
+                vence. <strong>Custo médio</strong> divide pelo ciclo completo — estável, mas subfinancia itens
+                comprados perto do fim da vida útil.
+              </>
+            }
           >
-            Apagar dados de exemplo
-          </button>
-          <ConfirmDialog
-            open={confirmDemo}
-            title="Apagar todos os dados de exemplo?"
-            message="Os itens, compras e aportes fictícios saem do app. Seus registros não são tocados."
-            confirmLabel="Apagar"
-            destructive
-            onConfirm={async () => {
-              setConfirmDemo(false)
-              await deleteDemoData()
-            }}
-            onCancel={() => setConfirmDemo(false)}
-          />
-        </div>
-      )}
-    </div>
+            Cálculo
+          </SectionTitle>
+          <Card className="flex flex-col gap-4">
+            <div className="flex flex-col gap-1.5">
+              <span className="rotulo">Provisão mensal</span>
+              <div className="flex gap-1 rounded-lg bg-surface-2 p-1" role="tablist" aria-label="Método de provisão">
+                {methods.map((m) => {
+                  const active = provisioningMethod === m.id
+                  return (
+                    <button
+                      key={m.id}
+                      role="tab"
+                      aria-selected={active}
+                      onClick={() => setProvisioningMethod(m.id)}
+                      className={`min-h-10 flex-1 rounded-md text-[13.5px] font-semibold ${
+                        active ? 'bg-surface text-accent' : 'text-sub'
+                      }`}
+                    >
+                      {m.label}
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+            <div className="grid grid-cols-3 gap-3">
+              <Field label="Inflação %">
+                <input
+                  type="number"
+                  step="0.1"
+                  value={inflation}
+                  onChange={(e) => setInflation(e.target.value)}
+                  className={inputClass}
+                />
+              </Field>
+              <Field label="Aviso (dias)">
+                <input
+                  type="number"
+                  min={1}
+                  max={365}
+                  value={reminderLeadDays}
+                  onChange={(e) => setReminderLeadDays(Number(e.target.value))}
+                  className={inputClass}
+                />
+              </Field>
+              <Field label="Resumo (dia)">
+                <input
+                  type="number"
+                  min={1}
+                  max={28}
+                  value={digestDay}
+                  onChange={(e) => setDigestDay(Number(e.target.value))}
+                  className={inputClass}
+                />
+              </Field>
+            </div>
+          </Card>
+        </section>
+
+        <NotificationsSection />
+
+        <BackupSection />
+
+        {demoPresent && (
+          <section>
+            <SectionTitle help="O app veio com itens, compras e aportes fictícios. Apagá-los não afeta seus próprios registros.">
+              Dados de exemplo
+            </SectionTitle>
+            <Button variant="secondary" onClick={() => setConfirmDemo(true)} className="w-full text-erro">
+              <TrashIcon className="h-5 w-5" /> Apagar dados de exemplo
+            </Button>
+            <ConfirmDialog
+              open={confirmDemo}
+              title="Apagar os dados de exemplo?"
+              message="Seus próprios registros não são tocados."
+              confirmLabel="Apagar"
+              destructive
+              onConfirm={async () => {
+                setConfirmDemo(false)
+                await deleteDemoData()
+              }}
+              onCancel={() => setConfirmDemo(false)}
+            />
+          </section>
+        )}
+      </div>
+    </Screen>
   )
 }
 
-const permissionLabel: Record<NotificationPermission, string> = {
-  granted: 'Avisos autorizados',
-  denied: 'Avisos bloqueados no sistema',
-  prompt: 'Permissão ainda não concedida',
-  unsupported: 'Disponível apenas no app instalado',
+const permissionView: Record<NotificationPermission, { label: string; tone: string; Icon: typeof BellIcon }> = {
+  granted: { label: 'Autorizadas', tone: 'text-ok', Icon: BellAlertIcon },
+  denied: { label: 'Bloqueadas no sistema', tone: 'text-erro', Icon: BellSlashIcon },
+  prompt: { label: 'Não autorizadas', tone: 'text-alerta', Icon: BellIcon },
+  unsupported: { label: 'Só no app instalado', tone: 'text-sub', Icon: BellSlashIcon },
 }
 
 function NotificationsSection() {
@@ -222,77 +230,68 @@ function NotificationsSection() {
   }, [])
 
   const supported = notificationsSupported()
+  const view = permissionView[permission]
 
   return (
-    <div className="flex flex-col gap-2 border-t border-line pt-5">
-      <p className="text-sm font-medium text-sub">Notificações</p>
-      <p
-        className={`text-xs font-medium ${
-          permission === 'granted'
-            ? 'text-ok'
+    <section>
+      <SectionTitle
+        help={
+          !supported
+            ? 'No navegador o app não agenda avisos. Instale o APK para receber lembretes de troca e o resumo mensal.'
             : permission === 'denied'
-              ? 'text-erro'
-              : 'text-alerta'
-        }`}
+              ? 'Libere em Ajustes do Android > Apps > Revez > Notificações.'
+              : undefined
+        }
       >
-        {permissionLabel[permission]}
-      </p>
-
-      {!supported && (
-        <p className="text-xs text-sub">
-          No navegador o app não agenda avisos. Instale o APK para receber os lembretes de troca e o resumo mensal.
-        </p>
-      )}
-
-      {supported && permission !== 'granted' && (
-        <>
-          {permission === 'denied' && (
-            <p className="text-xs text-sub">
-              A permissão foi negada. Libere em Ajustes do Android &gt; Apps &gt; Revez &gt; Notificações.
-            </p>
+        Notificações
+      </SectionTitle>
+      <Card className="flex flex-col gap-3">
+        <div className="flex items-center gap-2">
+          <view.Icon className={`h-5 w-5 ${view.tone}`} />
+          <span className={`flex-1 text-[14px] font-medium ${view.tone}`}>{view.label}</span>
+          {supported && permission !== 'granted' && (
+            <Button
+              variant="secondary"
+              onClick={async () => {
+                setPermission(await requestNotificationPermission())
+                await refresh()
+              }}
+            >
+              Permitir
+            </Button>
           )}
-          <button
-            onClick={async () => {
-              setPermission(await requestNotificationPermission())
-              await refresh()
-            }}
-            className="min-h-11 rounded-lg border border-line-strong text-sm font-semibold text-sub"
-          >
-            Permitir notificações
-          </button>
-        </>
-      )}
+          {supported && permission === 'granted' && (
+            <Button
+              variant="secondary"
+              onClick={async () => {
+                const sent = await sendTestNotification()
+                setStatus(sent ? 'Teste enviado' : 'Falha ao enviar o teste')
+                await refresh()
+              }}
+            >
+              Testar
+            </Button>
+          )}
+        </div>
+        {status && <p className="text-[12.5px] text-sub">{status}</p>}
 
-      {supported && permission === 'granted' && (
-        <button
-          onClick={async () => {
-            const sent = await sendTestNotification()
-            setStatus(sent ? 'Teste enviado: o aviso chega em alguns segundos.' : 'Não foi possível enviar o teste.')
-            await refresh()
-          }}
-          className="min-h-11 rounded-lg border border-line-strong text-sm font-semibold text-sub"
-        >
-          Enviar notificação de teste
-        </button>
-      )}
-      {status && <p className="text-xs text-sub">{status}</p>}
-
-      {pending.length > 0 && (
-        <details className="text-xs text-sub">
-          <summary className="min-h-11 cursor-pointer py-3 font-medium">
-            Próximos avisos agendados ({pending.length})
-          </summary>
-          <ul className="mt-1 flex flex-col gap-1">
-            {pending.slice(0, 10).map((n) => (
-              <li key={n.id} className="flex justify-between gap-2">
-                <span className="min-w-0 flex-1 truncate">{n.title}</span>
-                <span className="shrink-0">{n.at ? formatDate(n.at) : 'mensal'}</span>
-              </li>
-            ))}
-          </ul>
-        </details>
-      )}
-    </div>
+        {pending.length > 0 && (
+          <details className="text-[12.5px] text-sub">
+            <summary className="flex min-h-10 cursor-pointer items-center font-medium">
+              Próximos avisos ({pending.length})
+            </summary>
+            <ul className="mt-1 flex flex-col gap-1">
+              {pending.slice(0, 10).map((n) => (
+                <li key={n.id} className="flex justify-between gap-2">
+                  <span className="min-w-0 flex-1 truncate">{n.title}</span>
+                  <span className="shrink-0">{n.at ? formatDate(n.at) : 'mensal'}</span>
+                </li>
+              ))}
+            </ul>
+          </details>
+        )}
+      </Card>
+    </section>
   )
 }
 
@@ -321,7 +320,7 @@ function BackupSection() {
     a.click()
     URL.revokeObjectURL(url)
     await db.settings.update('settings', { lastBackupAt: new Date().toISOString() })
-    setStatus('Backup exportado.')
+    setStatus('Backup exportado')
     setError(null)
   }
 
@@ -345,80 +344,68 @@ function BackupSection() {
     const skipped = totalSkipped(pendingImport.summary)
     setPendingImport(null)
     setStatus(
-      `Backup ${mode === 'replace' ? 'restaurado' : 'mesclado'} com sucesso.` +
-        (skipped > 0 ? ` ${skipped} ${skipped === 1 ? 'registro inválido foi ignorado' : 'registros inválidos foram ignorados'}.` : ''),
+      `Backup ${mode === 'replace' ? 'restaurado' : 'mesclado'}` +
+        (skipped > 0 ? ` · ${skipped} ${skipped === 1 ? 'registro inválido ignorado' : 'registros inválidos ignorados'}` : ''),
     )
   }
 
+  const stale = sinceBackup == null || sinceBackup >= EXPORT_REMINDER_DAYS
+
   return (
-    <div className="flex flex-col gap-2 border-t border-line pt-5">
-      <p className="text-sm font-medium text-sub">Backup dos dados</p>
-      <p className="text-xs text-sub">
-        Os dados ficam só neste dispositivo. Exporte periodicamente para não perder tudo ao trocar de aparelho ou
-        limpar o navegador.
-      </p>
-      {sinceBackup == null ? (
-        <p className="text-xs font-medium text-alerta">Você ainda não exportou nenhum backup.</p>
-      ) : (
-        sinceBackup >= EXPORT_REMINDER_DAYS && (
-          <p className="text-xs font-medium text-alerta">
-            Último backup há {sinceBackup} dias. Vale exportar de novo.
+    <section>
+      <SectionTitle help="Os dados ficam só neste dispositivo. Exporte de tempos em tempos para não perder tudo ao trocar de aparelho ou limpar o navegador.">
+        Backup
+      </SectionTitle>
+      <Card className="flex flex-col gap-3">
+        {stale && (
+          <p className="flex items-center gap-1.5 text-[13px] font-medium text-alerta">
+            <ExclamationTriangleIcon className="h-4 w-4 shrink-0" />
+            {sinceBackup == null ? 'Nenhum backup ainda' : `Último backup há ${sinceBackup} dias`}
           </p>
-        )
-      )}
-      <div className="flex gap-2">
-        <button
-          onClick={exportBackup}
-          className="min-h-11 flex-1 rounded-lg border border-line-strong text-sm font-semibold text-sub"
-        >
-          Exportar backup
-        </button>
-        <button
-          onClick={() => fileInputRef.current?.click()}
-          className="min-h-11 flex-1 rounded-lg border border-line-strong text-sm font-semibold text-sub"
-        >
-          Importar backup
-        </button>
-      </div>
-      <input ref={fileInputRef} type="file" accept="application/json" onChange={onImportFile} className="hidden" />
-
-      {pendingImport && (
-        <div className="mt-1 flex flex-col gap-2 rounded-xl border border-line-strong p-3">
-          <p className="text-sm font-medium text-ink">Conferir antes de importar</p>
-          <ul className="text-xs text-sub">
-            <li>
-              Formato {pendingImport.summary.version}
-              {exportedAtLabel(pendingImport.summary.exportedAt) && `, exportado em ${exportedAtLabel(pendingImport.summary.exportedAt)}`}
-            </li>
-            <li>
-              {pendingImport.summary.items} itens, {pendingImport.summary.purchases} compras,{' '}
-              {pendingImport.summary.contributions} aportes, {pendingImport.summary.categories} categorias
-            </li>
-            {totalSkipped(pendingImport.summary) > 0 && (
-              <li className="font-medium text-alerta">
-                {totalSkipped(pendingImport.summary)} registro(s) inválido(s) serão ignorados
-              </li>
-            )}
-          </ul>
-          <Button onClick={() => runImport('merge')}>Mesclar com os dados atuais</Button>
-          <button
-            onClick={() => runImport('replace')}
-            className="min-h-11 rounded-lg border border-erro-soft-line text-sm font-semibold text-erro"
-          >
-            Substituir tudo o que está no app
-          </button>
-          <button
-            onClick={() => setPendingImport(null)}
-            className="min-h-11 text-sm font-medium text-sub"
-          >
-            Cancelar
-          </button>
+        )}
+        <div className="flex gap-2">
+          <Button variant="secondary" onClick={exportBackup} className="flex-1">
+            <ArrowDownTrayIcon className="h-5 w-5" /> Exportar
+          </Button>
+          <Button variant="secondary" onClick={() => fileInputRef.current?.click()} className="flex-1">
+            <ArrowUpTrayIcon className="h-5 w-5" /> Importar
+          </Button>
         </div>
-      )}
+        <input ref={fileInputRef} type="file" accept="application/json" onChange={onImportFile} className="hidden" />
 
-      {error && <p className="text-xs font-medium text-erro">{error}</p>}
-      {status && <p className="text-xs text-sub">{status}</p>}
-    </div>
+        {pendingImport && (
+          <div className="flex flex-col gap-2 rounded-lg bg-surface-2 p-3">
+            <p className="text-[14px] font-semibold text-ink">
+              {pendingImport.summary.items} itens · {pendingImport.summary.purchases} compras ·{' '}
+              {pendingImport.summary.contributions} aportes
+            </p>
+            <p className="text-[12px] text-sub">
+              {pendingImport.summary.categories} categorias · formato {pendingImport.summary.version}
+              {exportedAtLabel(pendingImport.summary.exportedAt) && ` · ${exportedAtLabel(pendingImport.summary.exportedAt)}`}
+            </p>
+            {totalSkipped(pendingImport.summary) > 0 && (
+              <p className="text-[12px] font-medium text-alerta">
+                {totalSkipped(pendingImport.summary)} registro(s) inválido(s) serão ignorados
+              </p>
+            )}
+            <Button onClick={() => runImport('merge')}>Mesclar com os dados atuais</Button>
+            <Button variant="destructive" onClick={() => runImport('replace')}>
+              Substituir tudo
+            </Button>
+            <Button variant="ghost" onClick={() => setPendingImport(null)}>
+              Cancelar
+            </Button>
+          </div>
+        )}
+
+        {error && <p className="text-[12.5px] font-medium text-erro">{error}</p>}
+        {status && (
+          <p className="flex items-center gap-1 text-[12.5px] font-medium text-ok">
+            <CheckCircleIcon className="h-4 w-4" /> {status}
+          </p>
+        )}
+      </Card>
+    </section>
   )
 }
 
@@ -441,51 +428,55 @@ function CategoriesSection() {
   }
 
   return (
-    <div className="flex flex-col gap-2 border-b border-line pb-5">
-      <p className="text-sm font-medium text-sub">Categorias</p>
-      <p className="text-xs text-sub">
-        Toque no nome para renomear. Categorias ocultas somem do cadastro e dos filtros; os itens delas continuam.
-      </p>
-      <ul className="flex flex-col gap-2">
-        {categories?.map((category) => {
-          const count = items?.filter((i) => i.categoryId === category.id).length ?? 0
-          return (
-            <li
-              key={category.id}
-              className={`flex items-center gap-2 rounded-lg border border-line px-3 py-1.5 ${category.hidden ? 'opacity-60' : ''}`}
-            >
-              <CategoryIcon name={category.icon} className="h-4 w-4 shrink-0 text-accent" />
-              <input
-                defaultValue={category.name}
-                key={category.name}
-                aria-label={`Nome da categoria ${category.name}`}
-                onBlur={(e) => rename(category, e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && e.currentTarget.blur()}
-                className="min-h-11 min-w-0 flex-1 bg-transparent text-base text-ink"
-              />
-              <span className="shrink-0 text-xs text-sub">{count}</span>
-              <button
-                onClick={() => db.categories.update(category.id, { hidden: !category.hidden })}
-                className="min-h-11 shrink-0 rounded-md border border-line-strong px-2 text-xs font-medium text-sub"
+    <section>
+      <SectionTitle help="Toque no nome para renomear. Categorias ocultas somem do cadastro e dos filtros; os itens delas continuam.">
+        Categorias
+      </SectionTitle>
+      <Card className="flex flex-col p-2">
+        <ul className="flex flex-col">
+          {categories?.map((category) => {
+            const count = items?.filter((i) => i.categoryId === category.id).length ?? 0
+            return (
+              <li
+                key={category.id}
+                className={`flex items-center gap-2 rounded-lg px-2 transition-opacity ${category.hidden ? 'opacity-50' : ''}`}
               >
-                {category.hidden ? 'Mostrar' : 'Ocultar'}
-              </button>
-            </li>
-          )
-        })}
-      </ul>
-      <form onSubmit={add} className="flex gap-2">
-        <input
-          value={newName}
-          onChange={(e) => setNewName(e.target.value)}
-          placeholder="Nova categoria"
-          aria-label="Nome da nova categoria"
-          className="min-h-11 min-w-0 flex-1 rounded-lg border border-line-strong bg-surface px-3 text-base text-ink"
-        />
-        <Button type="submit" className="px-4">
-          Adicionar
-        </Button>
-      </form>
-    </div>
+                <CategoryIcon name={category.icon} className="h-4 w-4 shrink-0 text-accent" />
+                <input
+                  defaultValue={category.name}
+                  key={category.name}
+                  aria-label={`Nome da categoria ${category.name}`}
+                  onBlur={(e) => rename(category, e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && e.currentTarget.blur()}
+                  className="min-h-11 min-w-0 flex-1 rounded-md bg-transparent px-1 text-[15px] text-ink"
+                />
+                <span className="shrink-0 text-[12px] text-faint" title={`${count} itens`}>
+                  {count}
+                </span>
+                <IconButton
+                  label={category.hidden ? `Mostrar ${category.name}` : `Ocultar ${category.name}`}
+                  aria-pressed={!!category.hidden}
+                  onClick={() => db.categories.update(category.id, { hidden: !category.hidden })}
+                >
+                  {category.hidden ? <EyeSlashIcon className="h-5 w-5" /> : <EyeIcon className="h-5 w-5" />}
+                </IconButton>
+              </li>
+            )
+          })}
+        </ul>
+        <form onSubmit={add} className="mt-1 flex items-center gap-1 border-t border-line px-2 pt-2">
+          <input
+            value={newName}
+            onChange={(e) => setNewName(e.target.value)}
+            placeholder="Nova categoria"
+            aria-label="Nome da nova categoria"
+            className="min-h-11 min-w-0 flex-1 bg-transparent px-1 text-[15px] text-ink placeholder:text-faint"
+          />
+          <IconButton label="Adicionar categoria" type="submit" disabled={!newName.trim()} className="text-accent disabled:opacity-40">
+            <PlusIcon className="h-5 w-5" />
+          </IconButton>
+        </form>
+      </Card>
+    </section>
   )
 }
